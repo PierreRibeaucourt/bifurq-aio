@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bifurq AIO : les adresses inventées par l'IA de Google, repérées et redirigées</title>
+<title>Bifurq AIO : repérez et redirigez les adresses inventées par l'IA de Google</title>
 <meta name="description" content="Outil gratuit pour Windows : repère dans votre Search Console les adresses de votre site inventées par l'IA de Google et vous indique vers quelle page les rediriger.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
@@ -26,7 +26,7 @@ ces adresses dans votre Search Console et vous indique vers quelle page les redi
 <a class="bouton" href="https://github.com/PierreRibeaucourt/bifurq-aio/archive/refs/heads/main.zip">Télécharger pour Windows</a>
 <a class="bouton secondaire" href="https://github.com/PierreRibeaucourt/bifurq-aio">Voir le code source</a>
 </div>
-<p class="note">Gratuit et open source (licence MIT). Pour Windows 10 ou 11, avec <a href="https://www.python.org/downloads/">Python</a> installé (gratuit) : installez-le d'abord s'il n'est pas sur votre ordinateur.</p>
+<p class="note">Gratuit et open source (licence MIT). L'outil fonctionne sous Windows 10 ou 11 avec <a href="https://www.python.org/downloads/">Python</a>. Python est gratuit et s'installe avant l'outil s'il n'est pas déjà sur votre ordinateur.</p>
 </div>
 <div class="pancarte" aria-hidden="true">
 <span class="pancarte-titre">Déviation</span>
@@ -38,11 +38,11 @@ ces adresses dans votre Search Console et vous indique vers quelle page les redi
 <section class="bloc">
 <h2>Comment ça marche</h2>
 <ol class="etapes">
-<li>Vous connectez le compte Google qui gère votre Search Console, en lecture seule.</li>
+<li>Vous connectez en lecture seule le compte Google qui gère votre Search Console.</li>
 <li>L'outil cherche les adresses de votre site vues dans Google qui répondent en erreur et que Google n'a jamais explorées.</li>
-<li>Pour chacune, il propose la page réelle la plus proche. Vous posez la redirection vous-même.</li>
+<li>Il propose pour chacune la page réelle la plus proche. Vous posez la redirection vous-même.</li>
 </ol>
-<p class="sous">L'analyse se relance seule, au démarrage de l'ordinateur ou chaque jour à l'heure choisie.
+<p class="sous">L'analyse se relance seule au démarrage de l'ordinateur ou chaque jour à l'heure choisie.
 Une notification Windows vous prévient quand une nouvelle adresse est à corriger. L'outil ne modifie jamais votre site.</p>
 <p class="sous"><a href="fonctionnement.html">Lire le détail du fonctionnement de l'outil</a></p>
 </section>
@@ -54,7 +54,7 @@ Une notification Windows vous prévient quand une nouvelle adresse est à corrig
 <li>Si Python n'est pas encore installé sur votre ordinateur : téléchargez-le sur <a href="https://www.python.org/downloads/">python.org</a> et suivez l'installation.</li>
 <li>Téléchargez l'outil avec le bouton ci-dessus et décompressez le fichier ZIP.</li>
 <li>Double-cliquez sur <b>installer</b>. Vous pourrez ensuite supprimer le fichier ZIP et le dossier téléchargés.</li>
-<li>L'outil s'ouvre dans votre navigateur. Cliquez sur <b>Connecter mon compte Google</b>, choisissez le site à surveiller, et c'est tout.</li>
+<li>L'outil s'ouvre dans votre navigateur. Cliquez sur <b>Connecter mon compte Google</b> puis choisissez le site à surveiller.</li>
 </ol>
 <p class="note">Pour mettre à jour : téléchargez la nouvelle version et double-cliquez sur <b>installer</b>. Vos sites et réglages sont conservés.</p>
 </div>
@@ -63,11 +63,12 @@ Une notification Windows vous prévient quand une nouvelle adresse est à corrig
 <section class="bloc">
 <h2>Pourquoi l'outil demande l'accès à votre Search Console</h2>
 <div class="carte">
-<p>Pour trouver les adresses inventées, l'outil a besoin de lire les pages de votre site que Google affiche dans
-ses résultats, et de savoir si Google les a déjà explorées. Il demande pour cela un seul accès, en <b>lecture
-seule</b> : <code>webmasters.readonly</code>. Il ne peut rien modifier dans votre Search Console.</p>
+<p>L'outil lit les pages de votre site que Google affiche dans ses résultats. Il vérifie aussi si Google les a
+déjà explorées. Ces deux informations lui servent à trouver les adresses inventées. Il demande pour cela un seul
+accès en <b>lecture seule</b> : <code>webmasters.readonly</code>. Il ne peut rien modifier dans votre Search
+Console.</p>
 <p>Tout se passe sur votre ordinateur. Vos données Search Console et votre connexion Google ne passent par
-aucun serveur de l'auteur de l'outil, qui n'y a aucun accès. Le détail est dans les
+aucun serveur de l'auteur de l'outil. L'auteur n'y a aucun accès. Le détail est dans les
 <a href="confidentialite.html">règles de confidentialité</a>.</p>
 </div>
 </section>
@@ -78,15 +79,15 @@ aucun serveur de l'auteur de l'outil, qui n'y a aucun accès. Le détail est dan
 <div>
 <p class="auteur-sur">Créé par</p>
 <h2>Pierre Ribeaucourt</h2>
-<p>Je partage cet outil gratuitement et en open source. Une question, une idée d'amélioration, un retour
-d'expérience ? Écrivez-moi sur LinkedIn.</p>
+<p>Je partage cet outil gratuitement et en open source. Écrivez-moi sur LinkedIn pour une question, une idée
+d'amélioration ou un retour d'expérience.</p>
 <a class="bouton" href="https://www.linkedin.com/in/pierre-ribeaucourt/">Me retrouver sur LinkedIn</a>
 </div>
 </div>
 </section>
 
 <footer class="pied">
-<p>Projet personnel open source de <a href="https://www.linkedin.com/in/pierre-ribeaucourt/">Pierre Ribeaucourt</a>, publié sous licence MIT.
+<p>Projet personnel open source de <a href="https://www.linkedin.com/in/pierre-ribeaucourt/">Pierre Ribeaucourt</a> publié sous licence MIT.
 <a href="fonctionnement.html">Fonctionnement</a> ·
 <a href="confidentialite.html">Règles de confidentialité</a> ·
 <a href="https://github.com/PierreRibeaucourt/bifurq-aio">Code source</a> ·
