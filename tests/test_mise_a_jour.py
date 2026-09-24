@@ -65,6 +65,20 @@ def test_hors_ligne_rien_ne_casse_et_l_annonce_reste(monkeypatch):
     assert mise_a_jour.disponible()["version"] == _plus_recente()
 
 
+def test_lecture_ratee_reessayee_au_bout_d_une_heure(monkeypatch):
+    """Régression du 24.09.2026 : une lecture ratée juste après l'installation repoussait
+    le prochain essai de 20 heures."""
+    appels = _en_ligne(monkeypatch, OSError("hors ligne"))
+    mise_a_jour.verifier(maintenant=1000.0)
+    assert mise_a_jour.lire()["erreur"] == "OSError : hors ligne"
+    mise_a_jour.verifier(maintenant=1000.0 + mise_a_jour.REESSAI - 1)
+    assert len(appels) == 1
+    _en_ligne(monkeypatch, {"version": _plus_recente()})
+    mise_a_jour.verifier(maintenant=1000.0 + mise_a_jour.REESSAI)
+    assert mise_a_jour.disponible()["version"] == _plus_recente()
+    assert "erreur" not in mise_a_jour.lire()
+
+
 def test_numero_illisible_ignore(monkeypatch):
     for version in ("../../ailleurs", "1.2", "v9.9.9", "", None):
         _en_ligne(monkeypatch, {"version": version})
