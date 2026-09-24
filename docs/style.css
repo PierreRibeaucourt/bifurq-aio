@@ -78,6 +78,10 @@ h3{font-size:19px;line-height:1.2}
   padding:0 20px;cursor:pointer}
 .commande button:hover{background:var(--jaune-fonce)}
 .installer>.note{margin-top:18px}
+.autrement{margin-top:14px}
+.autrement summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--doux)}
+.autrement summary:hover{color:var(--texte)}
+.autrement[open] summary{margin-bottom:10px}
 
 .installations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .installations h3{display:flex;align-items:center;gap:10px;margin-bottom:12px}
