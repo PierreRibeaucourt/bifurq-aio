@@ -147,6 +147,20 @@ def test_analyse_incomplete_ne_dit_pas_que_tout_est_verifie():
     assert "à corriger" not in html
 
 
+def test_ordre_des_sites_a_traiter_d_abord():
+    sites = {k: {"nom": k + ".fr"} for k in ("ok", "neuf", "un", "trois", "panne", "bloque")}
+    etat = {"ok": {"statut": "ok"}, "un": {"statut": "a_corriger", "a_rediriger": [_adresse()]},
+            "trois": {"statut": "a_corriger", "a_rediriger": [_adresse("a"), _adresse("b"), _adresse("c")]},
+            "panne": {"statut": "probleme"}, "bloque": {"statut": "incomplet"}}
+    assert report.ordre_des_sites(sites, etat) == ["panne", "trois", "un", "bloque", "neuf", "ok"]
+
+
+def test_rapport_dans_l_ordre_de_mes_sites():
+    etat = {"exemple": {"statut": "ok"}, "autre": {"statut": "a_corriger", "a_rediriger": [_adresse()]}}
+    html = report.rendre(etat, SITES, "2026-09-24T10:00")
+    assert html.index("autre&lt;site&gt;.fr") < html.index("exemple.fr")
+
+
 def test_rapport_renvoie_vers_le_site_de_l_outil():
     html = report.rendre({"exemple": {"statut": "ok", "date": "2026-09-24T10:00"}}, SITES, "2026-09-24T10:00")
     assert 'href="https://pierreribeaucourt.github.io/bifurq-aio/"' in html

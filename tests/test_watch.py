@@ -165,7 +165,8 @@ def test_resultat_d_un_site_visible_sans_attendre_la_fin_des_suivants(monkeypatc
     for cle in ("a", "b"):
         config.ajouter_site(cle, nom=cle + ".fr", propriete="sc-domain:%s.fr" % cle,
                             sitemaps=["https://%s.fr/sitemap.xml" % cle])
-    watch._ecrire_json(watch.chemin_etat(), {"a": {"statut": "ok", "date": "2026-01-01T09:00"}})
+    watch._ecrire_json(watch.chemin_etat(), {"a": {"statut": "ok", "date": "2026-01-01T09:00"},
+                                             "b": {"statut": "ok", "date": "2026-01-01T09:00"}})
     etat_de_a_pendant_b = {}
 
     def veille_site(cle, cfg, controleur, journal, aujourd_hui=None, etape=None):
@@ -182,6 +183,28 @@ def test_resultat_d_un_site_visible_sans_attendre_la_fin_des_suivants(monkeypatc
     watch.executer(interactif=True)
     assert etat_de_a_pendant_b["statut"] == "a_corriger"          # nouvelle analyse, pas l'ancien "ok"
     assert watch.lire_etat()["b"]["statut"] == "ok"
+
+
+def test_sites_analyses_dans_l_ordre_de_mes_sites(monkeypatch):
+    for cle in ("a", "b", "c", "d"):
+        config.ajouter_site(cle, nom=cle + ".fr", propriete="sc-domain:%s.fr" % cle,
+                            sitemaps=["https://%s.fr/sitemap.xml" % cle])
+    watch._ecrire_json(watch.chemin_etat(), {"a": {"statut": "ok"}, "b": {"statut": "incomplet"},
+                                             "d": {"statut": "probleme"}})
+    analyses = []
+
+    def veille_site(cle, cfg, controleur, journal, aujourd_hui=None, etape=None):
+        analyses.append(cle)
+        return {"site": cle, "fin_gsc": FIN, "a_rediriger": [], "anomalies": [], "infos": [], "resolues": []}
+    monkeypatch.setattr(watch, "veille_site", veille_site)
+    from veille_ia import notify_windows
+    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: True)
+    watch.executer(interactif=True)
+    assert analyses == ["d", "b", "c", "a"]         # problème, incomplet, jamais analysé, tout va bien
+    analyses.clear()
+    watch._ecrire_json(watch.chemin_etat(), {"a": {"statut": "probleme"}})
+    watch.executer(interactif=True, cles=["c", "a"])
+    assert analyses == ["a", "c"]
 
 
 def test_erreur_410_a_corriger_comme_un_404(monkeypatch):

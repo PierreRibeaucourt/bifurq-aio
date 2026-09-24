@@ -4,7 +4,7 @@ import html
 import json
 
 from .. import __version__
-from ..report import SCRIPT_TABLEAU, entete_site, tableau_adresses
+from ..report import ORDRE_STATUTS, SCRIPT_TABLEAU, entete_site, ordre_des_sites, statut_du_site, tableau_adresses
 from ..style import NOM_OUTIL, bandeau_auteur, gabarit
 
 e = html.escape
@@ -142,19 +142,8 @@ def _bandeau_mise_a_jour(maj, en_cours, jeton):
             % (e(maj["version"]), e(NOM_OUTIL), nouveautes, _jeton(jeton), bouton))
 
 
-# Mes sites : les sites à traiter d'abord, puis ceux qui vont bien
-ORDRE_STATUTS = ("probleme", "a_corriger", "incomplet", "aucun", "ok")
 LIBELLES_STATUTS = {"probleme": "Problème", "a_corriger": "À corriger", "incomplet": "Incomplet",
                     "aucun": "À venir", "ok": "Tout va bien"}
-
-
-def _statut(es):
-    s = es.get("statut")
-    return s if s in LIBELLES_STATUTS else "aucun"
-
-
-def _ordre(cle, cfg, es):
-    return (ORDRE_STATUTS.index(_statut(es)), -len(es.get("a_rediriger") or []), cfg["nom"].lower(), cle)
 
 
 # icônes des boutons, au trait comme celle des réglages
@@ -185,7 +174,7 @@ def _outils_sites(sites, etat):
         return ""
     compte = {}
     for cle in sites:
-        s = _statut(etat.get(cle) or {})
+        s = statut_du_site(etat.get(cle))
         compte[s] = compte.get(s, 0) + 1
     filtres = ['<button type="button" class="filtre" data-statut="" aria-pressed="true">Tous <b>%d</b></button>'
                % len(sites)]
@@ -233,8 +222,8 @@ if(q&&document.activeElement===q)boucle();else location.reload();},3000);})();}
 def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True, maj=None, a_jour=False):
     actif = (progression or {}).get("site") if en_cours else None
     lignes = []
-    for cle, cfg in sorted(sites.items(), key=lambda kv: _ordre(kv[0], kv[1], etat.get(kv[0]) or {})):
-        es = etat.get(cle) or {}
+    for cle in ordre_des_sites(sites, etat):
+        cfg, es = sites[cle], etat.get(cle) or {}
         lien = "/site?cle=%s" % e(cle)
         actions = []
         reconnecter = es.get("statut") == "probleme" and es.get("action") == "reconnecter"
@@ -248,7 +237,7 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
         actions.append('<a class="bouton secondaire icone" href="/modifier?cle=%s" title="Modifier ce site" '
                        'aria-label="Modifier %s">%s</a>' % (e(cle), e(cfg["nom"]), ICONE_MODIFIER))
         attributs = 'data-cle="%s" data-nom="%s" data-statut="%s"' % (
-            e(cle), e("%s %s" % (cfg["nom"], cfg.get("propriete", ""))), _statut(es))
+            e(cle), e("%s %s" % (cfg["nom"], cfg.get("propriete", ""))), statut_du_site(es))
         lignes.append(entete_site(cfg["nom"], es, en_cours=actif == cfg["nom"], lien=lien, actions="".join(actions),
                                   details=False, classe="carte-site", attributs=attributs))
     chantier = ""

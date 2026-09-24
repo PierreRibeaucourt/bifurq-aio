@@ -76,6 +76,25 @@ def lisible(url):
         return url
 
 
+# ordre des sites dans Mes sites, le rapport et l'analyse : ceux à traiter d'abord
+ORDRE_STATUTS = ("probleme", "a_corriger", "incomplet", "aucun", "ok")
+
+
+def statut_du_site(etat_site):
+    s = (etat_site or {}).get("statut")
+    return s if s in ORDRE_STATUTS else "aucun"
+
+
+def ordre_des_sites(sites, etat):
+    """Les clés des sites dans l'ordre d'affichage : par état, le plus d'adresses à
+    corriger en tête, puis par nom."""
+    def rang(cle):
+        es = etat.get(cle) or {}
+        return (ORDRE_STATUTS.index(statut_du_site(es)), -len(es.get("a_rediriger") or []),
+                sites[cle].get("nom", cle).lower(), cle)
+    return sorted(sites, key=rang)
+
+
 def panneau(etat_site, en_cours=False):
     """Le panneau qui donne l'état d'un site d'un coup d'oeil."""
     es = etat_site or {}
@@ -238,8 +257,8 @@ def tableau_adresses(es, actions=None, nom_site=""):
 def rendre(etat, sites, maintenant):
     """Rapport autonome (ouvert en fichier par la notification) : tous les sites."""
     blocs = []
-    for cle, cfg in sites.items():
-        es = etat.get(cle) or {}
+    for cle in ordre_des_sites(sites, etat):
+        cfg, es = sites[cle], etat.get(cle) or {}
         blocs.append('<section class="bloc-site">%s%s</section>'
                      % (entete_site(cfg["nom"], es, classe="carte-site"), tableau_adresses(es, nom_site=cfg["nom"])))
     heure = datetime.datetime.fromisoformat(maintenant).strftime("%H:%M")
