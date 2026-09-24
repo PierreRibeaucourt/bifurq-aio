@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comment fonctionne Bifurq AIO</title>
+<meta name="description" content="Ce que Bifurq AIO signale, ce qu'il ne signale pas, comment il vérifie chaque adresse, et que faire si votre site est protégé contre les robots.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bandeau"><div class="bandeau-int">
+<a class="marque" href="./"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#FFC21A"/><rect x="2.6" y="2.6" width="22.8" height="22.8" rx="3" fill="none" stroke="#121417" stroke-width="1.5"/><path d="M10 21.5v-6a3.5 3.5 0 0 1 3.5-3.5H19" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round"/><path d="M16 8.2l3.8 3.8-3.8 3.8" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Bifurq AIO</span></a>
+<nav><a href="./">Présentation</a><a href="fonctionnement.html" aria-current="page">Fonctionnement</a><a href="confidentialite.html">Confidentialité</a><a href="https://github.com/PierreRibeaucourt/bifurq-aio">Code source</a></nav>
+</div></header>
+
+<main class="page etroit texte">
+<h1>Comment fonctionne l'outil</h1>
+<p class="sous">Ce qu'il signale, ce qu'il ne signale pas, et comment il vérifie chaque adresse.</p>
+
+<div class="encadre" style="margin-top:24px">
+<p><b>En bref :</b> l'outil ne cherche pas toutes les erreurs 404 de votre site. Il cherche les adresses que
+Google affiche alors qu'elles n'ont jamais existé : ce sont les seules qu'aucun autre rapport ne vous montre.</p>
+</div>
+
+<h2>D'où viennent ces adresses</h2>
+<p>Les réponses de l'IA de Google (AI Overview et AI Mode) citent parfois une adresse de votre site qui n'a
+jamais existé. C'est souvent une déformation d'une vraie page : un mot sauté, une faute de frappe, un titre
+transformé en adresse. Ces citations comptent comme des affichages dans votre Search Console : c'est là que
+l'outil les repère.</p>
+
+<h2>Quand une adresse est signalée</h2>
+<p>Il faut que les quatre conditions soient réunies :</p>
+<ol class="etapes une-colonne">
+<li><div><b>Google l'affiche.</b> Elle est apparue dans les résultats de Google ces 7 derniers jours, et au
+moins 15 fois en 3 mois, d'après votre Search Console. Ce seuil se change pour chaque site, dans
+<b>Modifier</b>.</div></li>
+<li><div><b>Elle n'est pas dans votre plan de site.</b> L'outil considère les pages de votre plan de site comme
+vos vraies pages.</div></li>
+<li><div><b>Google ne la connaît pas.</b> L'inspection d'URL de la Search Console répond « URL inconnue de
+Google » : Google ne l'a jamais explorée, elle n'a donc jamais existé.</div></li>
+<li><div><b>Elle répond en erreur.</b> Quand l'outil la visite, votre site répond 404 (page introuvable) ou 410
+(page supprimée).</div></li>
+</ol>
+<p>Pour chaque adresse signalée, l'outil cherche dans votre plan de site la page dont l'adresse ressemble le plus,
+d'abord dans la même rubrique. Si elle ressemble assez, il la propose comme destination de la redirection :
+<b>Sûre</b> quand la ressemblance est nette et qu'aucune autre page n'est aussi proche, <b>À vérifier</b> sinon.
+Si aucune page ne ressemble assez, il vous signale l'adresse et vous choisissez la destination.</p>
+
+<h2>Ce que l'outil ne signale pas</h2>
+<ul>
+<li><b>Les pages supprimées sans redirection.</b> Google les connaissait : elles ne remplissent pas la
+condition 3. La Search Console les liste déjà, dans le rapport <b>Pages</b>, motif « Introuvable (404) ».</li>
+<li><b>Les pages d'erreur qui s'affichent comme une page normale</b> (code 200, qu'on appelle « soft 404 »).
+L'outil lit le code de réponse, pas le contenu de la page : il les prend pour des pages qui fonctionnent.</li>
+<li><b>Les adresses vues moins souvent que le seuil.</b> L'outil les compte et l'indique sous le site, sans
+alerte.</li>
+<li><b>Les adresses avec paramètres ou ancre</b>, c'est-à-dire avec un « ? » ou un « # ». Elles sont
+ignorées.</li>
+</ul>
+
+<h2 id="verification">Comment l'outil vérifie une adresse</h2>
+<p>Il la visite depuis votre ordinateur, comme le ferait un navigateur, et lit le code de réponse de votre
+site.</p>
+<ul>
+<li><b>Peu de visites.</b> Il ne visite que les adresses qui remplissent déjà les trois premières conditions,
+une à la fois, avec une pause d'une seconde et demie entre deux. Il n'explore pas votre site.</li>
+<li><b>Il se présente.</b> Dans les journaux de votre serveur, ses visites portent le nom
+<code>Bifurq-AIO</code>, avec l'adresse de ce projet.</li>
+<li><b>Il suit les redirections.</b> Une adresse redirigée vers une page qui fonctionne est considérée comme
+corrigée et sort du rapport.</li>
+<li><b>Il revérifie.</b> Une adresse en erreur est revérifiée chaque jour, pour voir vite que vous l'avez
+corrigée. Une adresse corrigée l'est une fois par semaine, pour vous prévenir si la redirection saute.</li>
+<li><b>Il ne conclut rien d'une réponse douteuse.</b> Accès refusé, serveur en panne, pas de réponse :
+l'adresse n'est ni signalée, ni considérée comme corrigée. Le site passe en <b>Analyse incomplète</b> et
+l'adresse est retestée à l'analyse suivante.</li>
+</ul>
+
+<h2 id="site-protege">Si votre site est protégé contre les robots</h2>
+<p>Beaucoup de sites filtrent les visites automatiques avec un service comme Cloudflare, DataDome, Akamai,
+Imperva ou Sucuri. Si ce service bloque l'outil, c'est lui qui répond à la place de votre site, et l'outil ne
+peut pas savoir si l'adresse existe. L'outil l'indique sous le nom du site, en nommant la protection :
+« Votre site bloque l'outil (protection anti-robots Cloudflare) ».</p>
+<p>Pour laisser passer l'outil, autorisez l'adresse IP de l'ordinateur où il est installé :</p>
+<ol>
+<li>Trouvez cette adresse IP : depuis cet ordinateur, cherchez « quelle est mon adresse IP » dans Google.</li>
+<li>Dans votre protection, ajoutez une règle qui laisse passer cette adresse IP. Si vous ne gérez pas vous-même
+la protection du site, transmettez la demande à la personne qui s'en occupe.</li>
+<li>Dans l'outil, cliquez sur <b>Analyser maintenant</b> : les adresses bloquées sont retestées tout de
+suite.</li>
+</ol>
+
+<h3>Avec Cloudflare</h3>
+<p>Créez une règle personnalisée du pare-feu (WAF) sur l'adresse IP source, avec l'action <b>Skip</b>. Si le
+blocage vient du <b>Bot Fight Mode</b> de l'offre gratuite, aucune règle ne permet d'y faire exception : seule
+sa désactivation laisse passer l'outil.</p>
+
+<h3>Bon à savoir</h3>
+<ul>
+<li><b>N'autorisez pas l'outil par son nom.</b> N'importe quel robot peut se présenter sous le nom
+<code>Bifurq-AIO</code> et contourner ainsi votre protection. Autorisez son adresse IP.</li>
+<li><b>À domicile, l'adresse IP change parfois.</b> Si le blocage revient, mettez la règle à jour avec la
+nouvelle adresse.</li>
+<li><b>Autre possibilité : DataForSEO.</b> Si vous avez un compte DataForSEO, renseignez vos identifiants dans
+<b>Modifier</b>, rubrique <b>Réglages avancés</b>. La vérification passe alors par ce service, plus souvent
+accepté qu'un ordinateur ordinaire. Les protections les plus strictes peuvent aussi le bloquer.</li>
+</ul>
+
+<footer class="pied">
+<p><a href="./">Présentation de l'outil</a> ·
+<a href="confidentialite.html">Règles de confidentialité</a> ·
+<a href="https://github.com/PierreRibeaucourt/bifurq-aio">Code source</a></p>
+</footer>
+</main>
+</body>
+</html>

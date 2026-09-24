@@ -9,7 +9,7 @@ import os
 import re
 import urllib.parse
 
-from .style import bandeau_auteur, gabarit
+from .style import FONCTIONNEMENT, bandeau_auteur, gabarit
 
 e = html.escape
 
@@ -124,14 +124,21 @@ def resume(etat_site, details=True):
             else:
                 phrase += " Aucune ne ressemble assez à une page existante pour proposer une destination."
         blocs.append('<p class="phrase">%s</p>' % phrase)
-    elif statut in ("ok", "incomplet"):
+    elif statut == "ok":
         blocs.append('<p class="phrase">Aucune adresse inventée à corriger.</p>')
+    elif statut == "incomplet":                  # des adresses n'ont pas pu être vérifiées
+        blocs.append('<p class="phrase">Aucune adresse inventée confirmée pour l\'instant.</p>')
     else:
         blocs.append('<p class="phrase">La première analyse n\'a pas encore eu lieu.</p>')
     if es.get("date"):
         blocs.append('<p class="meta">Dernière analyse : %s.</p>' % quand(es["date"]))
+    protection = es.get("protection")
     for a in es.get("anomalies") or []:
-        blocs.append('<div class="encadre alerte"><p>%s</p></div>' % e(a))
+        aide = ""
+        if protection and protection in a:       # le message qui nomme la protection du site
+            aide = (' <a href="%s#site-protege" target="_blank" rel="noopener">Comment faire</a>'
+                    % FONCTIONNEMENT)
+        blocs.append('<div class="encadre alerte"><p>%s%s</p></div>' % (e(a), aide))
     if details:
         for i in es.get("infos") or []:
             blocs.append('<p class="meta">%s</p>' % e(i))

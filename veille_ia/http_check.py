@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Code HTTP d'une adresse suspecte : confirme qu'elle répond bien 404 avant de la
-proposer en redirection (un contrôle HTTP raté ne doit jamais se lire comme un 404).
+"""Code HTTP d'une adresse suspecte : confirme qu'elle répond bien en erreur (404 ou
+410) avant de la proposer en redirection (un contrôle HTTP raté ne doit jamais se lire
+comme une erreur confirmée).
 
 Deux voies, choisies par site :
   - par défaut, une requête directe depuis le poste de l'utilisateur vers SON PROPRE
     site : légitime, à la différence d'un crawl de sites tiers. Un pare-feu ou un CDN
     peut renvoyer un code trompeur (403, 503) : à signaler comme "à vérifier", jamais
-    comme un 404 confirmé ;
+    comme une erreur confirmée. Quand la réponse vient d'une protection anti-robots
+    reconnue (Cloudflare, DataDome...), on la nomme pour dire à l'utilisateur quoi faire ;
   - si l'utilisateur fournit ses propres identifiants DataForSEO, un contrôle par ce
     service, plus robuste contre les pare-feux, cadencé
     à 12 appels par minute au plus (limite du compte DataForSEO, quel qu'il soit)."""
@@ -19,6 +21,38 @@ import urllib.request
 UA = {"User-Agent": "Bifurq-AIO/0.1 (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses propres pages)"}
 DELAI_COURTOISIE = 1.5
 DATAFORSEO_URL = "https://api.dataforseo.com/v3/on_page/instant_pages"
+ERREURS = (404, 410)               # l'adresse n'existe pas : à rediriger
+
+# Protections anti-robots : ce qui les trahit dans les en-têtes ou dans le début de la
+# page qu'elles renvoient à la place du site (en minuscules).
+PROTECTIONS = (
+    ("Cloudflare", ("cf-mitigated:",), ("cloudflare",), "server: cloudflare"),
+    ("DataDome", ("x-datadome:", "set-cookie: datadome="), ("captcha-delivery.com",), None),
+    ("Akamai", ("server: akamaighost",), ("errors.edgesuite.net",), None),
+    ("Imperva", ("x-iinfo:",), ("incapsula incident",), None),
+    ("Sucuri", ("x-sucuri-id:", "x-sucuri-block:"), ("sucuri website firewall",), None),
+)
+
+
+def corrigee(code):
+    """La page s'affiche, directement ou après redirection."""
+    return isinstance(code, int) and 200 <= code < 400
+
+
+def protection(code, entetes, debut):
+    """Nom de la protection anti-robots qui a répondu à la place du site, ou None.
+    entetes : [(nom, valeur)] ; debut : début de la page renvoyée. Une page qui s'affiche
+    ou une vraie erreur 404/410 vient du site, jamais d'une protection."""
+    if corrigee(code) or code in ERREURS:
+        return None
+    brut = "\n".join("%s: %s" % (k, v) for k, v in entetes).lower()
+    debut = debut.lower()
+    for nom, dans_entetes, dans_page, avec_entete in PROTECTIONS:
+        if any(s in brut for s in dans_entetes):
+            return nom
+        if any(s in debut for s in dans_page) and (avec_entete is None or avec_entete in brut):
+            return nom
+    return None
 
 
 class ControleurHTTP:
@@ -35,7 +69,8 @@ class ControleurHTTP:
         self._appels = 0
 
     def controler(self, url):
-        """Rend {"code": int, "finale": url} ou {"code": None, "erreur": str}."""
+        """Rend {"code": int, "finale": url}, avec "protection": nom si une protection
+        anti-robots a répondu à la place du site, ou {"code": None, "erreur": str}."""
         if self.dataforseo:
             return self._controler_dataforseo(url)
         return self._controler_direct(url)
@@ -47,7 +82,16 @@ class ControleurHTTP:
             r = urllib.request.urlopen(req, timeout=30)
             return {"code": r.status, "finale": r.geturl()}
         except urllib.error.HTTPError as e:
-            return {"code": e.code, "finale": e.geturl()}
+            r = {"code": e.code, "finale": e.geturl()}
+            if not corrigee(e.code) and e.code not in ERREURS:
+                try:
+                    debut = e.read(4096).decode("utf-8", "replace")
+                except Exception:
+                    debut = ""
+                nom = protection(e.code, (e.headers or {}).items(), debut)
+                if nom:
+                    r["protection"] = nom
+            return r
         except Exception as e:
             return {"code": None, "erreur": str(e)[:150]}
 

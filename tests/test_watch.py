@@ -17,7 +17,8 @@ class _ControleurHTTPFactice:
         self.codes = codes
 
     def controler(self, url):
-        return {"code": self.codes.get(url, 200), "finale": url}
+        r = self.codes.get(url, 200)
+        return dict(r, finale=url) if isinstance(r, dict) else {"code": r, "finale": url}
 
 
 @pytest.fixture(autouse=True)
@@ -180,3 +181,41 @@ def test_resultat_d_un_site_visible_sans_attendre_la_fin_des_suivants(monkeypatc
     watch.executer(interactif=True)
     assert etat_de_a_pendant_b["statut"] == "a_corriger"          # nouvelle analyse, pas l'ancien "ok"
     assert watch.lire_etat()["b"]["statut"] == "ok"
+
+
+def test_erreur_410_a_corriger_comme_un_404(monkeypatch):
+    _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"}, [{"URL": ADRESSE, "Impressions": 40}])
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({ADRESSE: 410}), lambda m: None, AUJOURD_HUI)
+    assert [d["adresse"] for d in r["a_rediriger"]] == [ADRESSE] and r["anomalies"] == []
+
+
+def test_protection_anti_robots_nommee_et_rien_de_conclu(monkeypatch):
+    _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"}, [{"URL": ADRESSE, "Impressions": 40}])
+    bloque = _ControleurHTTPFactice({ADRESSE: {"code": 403, "protection": "DataDome"}})
+    r = watch.veille_site("exemple", _site(), bloque, lambda m: None, AUJOURD_HUI)
+    assert r["a_rediriger"] == [] and r["resolues"] == [] and r["protection"] == "DataDome"
+    assert r["anomalies"] == ["Votre site bloque l'outil (protection anti-robots DataDome) : 1 adresse n'a pas pu "
+                              "être testée. Pour le laisser passer, ajoutez l'adresse IP de cet ordinateur en "
+                              "exception dans DataDome."]
+    etat = watch._etat_du_site(r, set(), {}, "2026-09-24T10:00")
+    assert etat["statut"] == "incomplet" and etat["protection"] == "DataDome"
+
+
+def test_adresse_bloquee_retestee_a_l_analyse_suivante_du_meme_jour(monkeypatch):
+    """Une fois la protection réglée, Analyser maintenant doit le montrer tout de suite."""
+    _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"}, [{"URL": ADRESSE, "Impressions": 40}])
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({ADRESSE: 403}), lambda m: None, AUJOURD_HUI)
+    assert r["a_rediriger"] == [] and "réponse bloquée" in r["anomalies"][0]
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({ADRESSE: 404}), lambda m: None, AUJOURD_HUI)
+    assert [d["adresse"] for d in r["a_rediriger"]] == [ADRESSE] and r["anomalies"] == []
+
+
+def test_erreur_confirmee_pas_retestee_le_meme_jour(monkeypatch):
+    _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"}, [{"URL": ADRESSE, "Impressions": 40}])
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({ADRESSE: 404}), lambda m: None, AUJOURD_HUI)
+
+    class _Interdit:
+        def controler(self, url):
+            raise AssertionError("adresse retestée")
+    r = watch.veille_site("exemple", _site(), _Interdit(), lambda m: None, AUJOURD_HUI)
+    assert len(r["a_rediriger"]) == 1
