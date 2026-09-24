@@ -110,3 +110,15 @@ def test_autres_protections_reconnues():
     assert http_check.protection(403, [("Server", "AkamaiGHost")], "Access Denied") == "Akamai"
     assert http_check.protection(403, [("X-Iinfo", "12-345")], "") == "Imperva"
     assert http_check.protection(403, [("X-Sucuri-ID", "11005")], "") == "Sucuri"
+
+
+# page Akamai relevée le 24.09.2026, adresse et référence anonymisées
+PAGE_AKAMAI = ("<HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n \n"
+               "You don't have permission to access \"http&#58;&#47;&#47;www&#46;exemple&#46;fr&#47;sitemap&#46;xml\" "
+               "on this server.<P>\nReference&#32;&#35;18&#46;1&#46;2&#46;3\n"
+               "<P>https&#58;&#47;&#47;errors&#46;edgesuite&#46;net&#47;18&#46;1&#46;2&#46;3</P>\n</BODY>\n</HTML>")
+
+
+def test_akamai_reconnu_meme_avec_une_page_encodee():
+    assert http_check.protection(403, [("Content-Type", "text/html")], PAGE_AKAMAI) == "Akamai"
+    assert http_check.protection(403, [("Server-Timing", "ak_p; desc=\"1_2_3\";dur=1")], "") == "Akamai"

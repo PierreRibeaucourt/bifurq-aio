@@ -7,10 +7,12 @@ import urllib.error
 import urllib.request
 
 from .erreurs import ErreurPlanDeSite
+from .http_check import UA, protection
 from .urls import norm
 
-UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+# UA : le nom de l'outil, comme pour ses autres visites. Une imitation de navigateur,
+# trahie par l'empreinte réseau de Python, est refusée par certaines protections
+# (relevé le 24.09.2026 : Akamai rendait 403 au faux Chrome et 200 à Bifurq-AIO).
 DELAI_COURTOISIE = 1.5
 
 
@@ -21,6 +23,17 @@ def lire_url(url, timeout=60):
     if url.endswith(".gz") or brut[:2] == b"\x1f\x8b":
         brut = gzip.decompress(brut)
     return brut.decode("utf-8", "replace")
+
+
+def _protection(erreur):
+    """Nom de la protection anti-robots qui a refusé la lecture, ou None."""
+    if not isinstance(erreur, urllib.error.HTTPError):
+        return None
+    try:
+        debut = erreur.read(4096).decode("utf-8", "replace")
+    except Exception:
+        debut = ""
+    return protection(erreur.code, (erreur.headers or {}).items(), debut)
 
 
 def plan_de_site(racines, journal, strict=False):
@@ -40,6 +53,12 @@ def plan_de_site(racines, journal, strict=False):
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ConnectionError) as e:
             journal("   plan de site %s : %s" % (u, getattr(e, "code", e)))
             if strict:
+                nom = _protection(e)
+                if nom:
+                    raise ErreurPlanDeSite(
+                        "Votre site bloque la lecture de son plan de site (protection anti-robots %s). Ajoutez "
+                        "l'adresse IP de cet ordinateur en exception dans %s pour laisser passer l'outil."
+                        % (nom, nom), "plan de site bloqué par %s : %s (%s)" % (nom, u, e.code))
                 raise ErreurPlanDeSite("Impossible de lire le plan de site de votre site (%s)." % u,
                                        "plan de site illisible : %s (%s)" % (u, getattr(e, "code", e)))
             continue

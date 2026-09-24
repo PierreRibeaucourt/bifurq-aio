@@ -108,3 +108,50 @@ def test_gzip_decompresse(journal):
     finally:
         s.arreter()
     assert pages == {"http://x/page"}
+
+
+class _ServeurEntetes:
+    """Répond (code, en-têtes, corps) et garde le User-Agent de chaque requête."""
+    def __init__(self, code, entetes, corps):
+        self.agents = []
+        agents = self.agents
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                agents.append(self.headers.get("User-Agent"))
+                self.send_response(code)
+                for k, v in entetes.items():
+                    self.send_header(k, v)
+                self.end_headers()
+                self.wfile.write(corps)
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.url = "http://127.0.0.1:%d/sitemap.xml" % self.httpd.server_port
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+
+    def arreter(self):
+        self.httpd.shutdown()
+
+
+def test_plan_de_site_lu_sous_le_nom_de_l_outil(journal):
+    """Régression du 24.09.2026 : un faux Chrome se faisait refuser (403) par Akamai,
+    qui laissait passer Bifurq-AIO."""
+    s = _ServeurEntetes(200, {"Content-Type": "application/xml"}, VIDE)
+    try:
+        sitemap.plan_de_site([s.url], journal, strict=True)
+    finally:
+        s.arreter()
+    assert s.agents and s.agents[0].startswith("Bifurq-AIO/")
+
+
+def test_plan_de_site_bloque_nomme_la_protection(journal):
+    from test_http_check import PAGE_AKAMAI
+    s = _ServeurEntetes(403, {"Content-Type": "text/html"}, PAGE_AKAMAI.encode())
+    try:
+        with pytest.raises(sitemap.ErreurPlanDeSite) as erreur:
+            sitemap.plan_de_site([s.url], journal, strict=True)
+    finally:
+        s.arreter()
+    assert "protection anti-robots Akamai" in str(erreur.value)
