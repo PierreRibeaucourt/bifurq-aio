@@ -8,7 +8,7 @@ Windows 10 et 11 (Bahnschrift, Segoe UI, Cascadia), rien à télécharger."""
 import html
 import urllib.parse
 
-NOM_OUTIL = "Veille des adresses inventées"
+NOM_OUTIL = "Bifurq AIO"
 
 CSS = """
 :root{color-scheme:light;
@@ -104,8 +104,12 @@ button:focus-visible{outline:2px solid var(--noir);outline-offset:2px;box-shadow
 .bloc-site{margin-top:30px}
 
 /* mode d'emploi en tête de Mes sites */
-.consigne{margin:0 0 16px;padding:14px 18px 14px 18px;background:var(--surface);border:1px solid var(--trait);
-  border-left:5px solid var(--noir);border-radius:4px}
+.consigne{position:relative;margin:0 0 16px;padding:14px 52px 14px 18px;background:var(--surface);
+  border:1px solid var(--trait);border-left:5px solid var(--noir);border-radius:4px}
+.consigne-fermer{position:absolute;top:8px;right:8px;margin:0}
+.consigne-fermer button{width:34px;height:34px;border:0;border-radius:3px;background:none;color:var(--doux);
+  font-size:24px;line-height:1;cursor:pointer}
+.consigne-fermer button:hover{background:var(--surface-2);color:var(--texte)}
 .consigne-titre{margin:0 0 6px;font-weight:700}
 .consigne ul{margin:0;padding-left:20px}
 .consigne li{margin:3px 0;font-size:14px;color:var(--doux)}
@@ -291,9 +295,13 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
   .barre-action{width:100%;flex-wrap:wrap}.barre-action .bouton{flex:1 1 auto}
 }
 
-/* auteur : bandeau noir à bande de chantier, en bas de Mes sites et du rapport */
+/* auteur : bandeau noir à bande de chantier, en bas de Mes sites et du rapport. Au moins 96 px
+   sous le contenu, et au bas de la fenêtre quand la page est courte. */
+.avant-auteur{height:96px}
+.page:has(> .auteur){display:flex;flex-direction:column;min-height:calc(100vh - 67px)}
+.page:has(> .auteur) > .avant-auteur{height:auto;flex:1 0 96px}
 .auteur{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px 22px;
-  align-items:center;margin-top:40px;padding:28px 24px 22px;background:var(--noir);color:#fff;border-radius:4px;
+  align-items:center;padding:28px 24px 22px;background:var(--noir);color:#fff;border-radius:4px;
   overflow:hidden}
 .auteur::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;
   background:repeating-linear-gradient(-45deg,var(--jaune) 0 12px,var(--noir) 12px 24px)}
@@ -313,7 +321,8 @@ LINKEDIN = "https://www.linkedin.com/in/pierre-ribeaucourt/"
 
 def bandeau_auteur():
     """L'auteur de l'outil, en bas de Mes sites et du rapport ouvert par les notifications."""
-    return ('<aside class="auteur" aria-label="Auteur de l\'outil"><div class="avatar" aria-hidden="true">PR</div>'
+    return ('<div class="avant-auteur"></div>'
+            '<aside class="auteur" aria-label="Auteur de l\'outil"><div class="avatar" aria-hidden="true">PR</div>'
             '<div><p class="auteur-sur">Un outil gratuit créé par</p><p class="auteur-nom">Pierre Ribeaucourt</p>'
             '<p class="auteur-texte">Cet outil vous rend service ? Dites-le-moi sur LinkedIn, avec une idée '
             'd\'amélioration ou un retour.</p></div>'

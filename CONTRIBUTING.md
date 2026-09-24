@@ -19,7 +19,7 @@ nécessaire, en discuter dans une issue d'abord.
 - `veille_ia/watch.py` : orchestrateur, un passage de veille pour tous les sites configurés.
 - `veille_ia/config.py` : lecture/écriture de `config/sites.json`.
 - `veille_ia/installer/` : serveur web local (installation, gestion), zéro dépendance.
-- `installer.pyw` : copie l'outil dans `%LOCALAPPDATA%\Veille adresses IA` (mise à jour si déjà
+- `installer.pyw` : copie l'outil dans `%LOCALAPPDATA%\Bifurq AIO` (mise à jour si déjà
   installé, sites conservés), puis `veille_ia/installation.py` crée le raccourci et remet la tâche
   planifiée sur ce dossier. Pour développer, lancer plutôt l'interface depuis le dépôt :
   `python -m veille_ia.installer.server` (configuration dans `config\` du dépôt, non versionnée).

@@ -6,7 +6,7 @@ bloque les .bat téléchargés (marque "provient d'Internet"), sans bouton pour 
 outre, alors qu'il laisse Python ouvrir un .pyw. pythonw n'a pas de console : une
 erreur s'affiche dans une boîte de dialogue, jamais en silence.
 
-L'outil est copié dans un dossier fixe, %LOCALAPPDATA%\\Veille adresses IA, et non
+L'outil est copié dans un dossier fixe, %LOCALAPPDATA%\\Bifurq AIO, et non
 lancé depuis le dossier téléchargé : chaque nouveau téléchargement arrive dans un
 dossier différent ("... (1)", "... (2)"), qui deviendrait sinon une installation de
 plus, vide. Relancer un installateur plus récent met donc l'outil à jour en gardant
@@ -29,11 +29,11 @@ import venv
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 DESTINATION = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local"),
-                           "Veille adresses IA")
+                           "Bifurq AIO")
 A_COPIER = ("veille_ia", "scripts_windows", "lancer_veille.pyw", "installer.pyw", "icone.ico",
             "requirements.txt", "LICENSE", "README.md")
 A_NE_PAS_REPRENDRE = ("venv", "serveur.json", "_temp_jeton.json", "installation.log")
-TITRE = "Veille des adresses inventées"
+TITRE = "Bifurq AIO"
 SANS_FENETRE = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
@@ -171,14 +171,14 @@ def installer(source=ICI, destination=DESTINATION):
     if not depuis_telechargement:
         return None
     if mise_a_jour:
-        debut = "Veille des adresses inventées est à jour. Vos sites et réglages sont conservés."
+        debut = "Bifurq AIO est à jour. Vos sites et réglages sont conservés."
     elif reprise:
-        debut = ("Veille des adresses inventées est installé. Les sites de votre installation "
+        debut = ("Bifurq AIO est installé. Les sites de votre installation "
                  "précédente ont été repris.")
     else:
-        debut = "Veille des adresses inventées est installé."
+        debut = "Bifurq AIO est installé."
     return ("%s\n\nL'outil s'ouvre dans votre navigateur. Pour le rouvrir plus tard : raccourci "
-            "Veille des adresses inventées sur votre bureau.\n\nVous pouvez supprimer le fichier ZIP et "
+            "Bifurq AIO sur votre bureau.\n\nVous pouvez supprimer le fichier ZIP et "
             "le dossier téléchargés : l'outil n'en a plus besoin." % debut)
 
 

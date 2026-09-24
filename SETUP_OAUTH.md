@@ -29,7 +29,7 @@ connecté au compte dédié : pays France, accepter les conditions. Ignorer tout
 gratuit qui demande une carte bancaire : elle n'est pas nécessaire.
 
 **3. Créer le projet.** En haut à gauche, **Sélectionner un projet**, puis **Nouveau projet**.
-Nom : `Veille adresses IA`. **Créer**, puis sélectionner ce projet dans le même menu.
+Nom : `Bifurq AIO`. **Créer**, puis sélectionner ce projet dans le même menu.
 
 **4. Activer l'accès à la Search Console.** Dans la barre de recherche en haut, taper
 **Google Search Console API**, ouvrir le résultat, cliquer sur **Activer**.
@@ -37,7 +37,7 @@ Nom : `Veille adresses IA`. **Créer**, puis sélectionner ce projet dans le mê
 **5. Déclarer l'application.** Sur
 [console.cloud.google.com/auth/overview](https://console.cloud.google.com/auth/overview),
 cliquer sur **Commencer** (Get started) :
-- nom de l'application : `Veille des adresses inventées` ; e-mail d'assistance : le compte dédié ;
+- nom de l'application : `Bifurq AIO` ; e-mail d'assistance : le compte dédié ;
 - audience : **Externe** ;
 - coordonnées : le compte dédié ;
 - accepter le règlement Google, puis **Créer**.
@@ -67,7 +67,7 @@ d'avertissement et il n'y a pas de limite d'utilisateurs.
   aucune vérification Google n'est nécessaire.
 
 **8. Créer la clé de l'outil.** Menu de gauche **Clients**, **Créer un client**. Type
-d'application : **Application de bureau**. Nom : `Veille adresses IA`. **Créer**. Dans la
+d'application : **Application de bureau**. Nom : `Bifurq AIO`. **Créer**. Dans la
 fenêtre qui s'ouvre, cliquer **tout de suite** sur **Télécharger le fichier JSON** : Google ne
 remontre plus jamais le code secret ensuite.
 

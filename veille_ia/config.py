@@ -102,6 +102,13 @@ def definir_planification(au_demarrage, actif_heure_fixe, heure_fixe):
     return donnees["planification"]
 
 
+def masquer_consigne():
+    """L'utilisateur a lu le mode d'emploi en tête de Mes sites : ne plus l'afficher."""
+    donnees = lire()
+    donnees.setdefault("interface", {})["consigne_masquee"] = True
+    ecrire(donnees)
+
+
 def desactiver_planification():
     donnees = lire()
     donnees["planification"]["active"] = False

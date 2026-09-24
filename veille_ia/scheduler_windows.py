@@ -8,7 +8,7 @@ import subprocess
 
 from . import config
 
-NOM_TACHE = "Veille adresses inventees IA"
+NOM_TACHE = "Bifurq AIO"
 PLANIFIER_PS1 = os.path.join(config.racine(), "scripts_windows", "planifier.ps1")
 
 
