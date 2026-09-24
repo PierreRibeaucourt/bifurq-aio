@@ -145,3 +145,8 @@ def test_analyse_incomplete_ne_dit_pas_que_tout_est_verifie():
     html = report.resume({"statut": "incomplet", "anomalies": ["2 adresses n'ont pas pu être testées."]})
     assert "Aucune adresse inventée confirmée pour l'instant." in html
     assert "à corriger" not in html
+
+
+def test_rapport_renvoie_vers_le_site_de_l_outil():
+    html = report.rendre({"exemple": {"statut": "ok", "date": "2026-09-24T10:00"}}, SITES, "2026-09-24T10:00")
+    assert 'href="https://pierreribeaucourt.github.io/bifurq-aio/"' in html
