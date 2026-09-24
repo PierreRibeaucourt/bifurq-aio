@@ -1,4 +1,4 @@
 {
-  "version": "0.4.1",
-  "nouveautes": "L'analyse suit l'ordre de Mes sites : les sites à traiter d'abord. Le rapport aussi."
+  "version": "0.5.0",
+  "nouveautes": "Bifurq AIO s'installe aussi sur Mac et Linux, avec une ligne à coller dans le Terminal. Sous Windows, l'outil fonctionne comme avant."
 }

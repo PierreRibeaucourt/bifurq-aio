@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from veille_ia import config, plateforme, systeme_linux, systeme_mac
+from veille_ia import config, plateforme, systeme_linux, systeme_mac, systeme_windows
 
 RACINE_AVEC_ESPACE = "Mon dossier l'outil"
 
@@ -86,6 +86,37 @@ def test_certificats_du_systeme_pour_le_python_de_python_org_sur_mac(monkeypatch
     avec = ssl.DefaultVerifyPaths(str(systeme), "", "", "", "", "")
     monkeypatch.setattr(ssl, "get_default_verify_paths", lambda: avec)
     assert plateforme.preparer_certificats("mac") is None and "SSL_CERT_FILE" not in os.environ
+
+
+# --- Windows --------------------------------------------------------------------------------------
+def test_windows_commandes_powershell(monkeypatch, _racine_isolee):
+    appels = []
+    monkeypatch.setattr(systeme_windows, "_powershell", lambda args, timeout=60: appels.append(args) or "")
+    monkeypatch.setattr(plateforme, "SYSTEME", "windows")
+    racine = str(_racine_isolee)
+    plateforme.planifier(True, True, "07:05")
+    plateforme.retirer_planification()
+    assert plateforme.notifier("Titre", "Texte", "rapport.html")
+    assert appels == [
+        ["-File", os.path.join(racine, "scripts_windows", "planifier.ps1"), "-NomTache", "Bifurq AIO",
+         "-CheminPythonw", os.path.join(racine, "config", "venv", "Scripts", "pythonw.exe"),
+         "-CheminScript", os.path.join(racine, "lancer_veille.pyw"), "-AuDemarrage", "-HeureFixe", "-Heure", "07:05"],
+        ["-File", os.path.join(racine, "scripts_windows", "planifier.ps1"), "-NomTache", "Bifurq AIO", "-Desinstaller"],
+        ["-File", os.path.join(racine, "scripts_windows", "notifier.ps1"), "-Titre", "Titre", "-Texte", "Texte",
+         "-Rapport", "rapport.html"]]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="raccourci Windows")
+def test_windows_raccourci_reel(tmp_path, _racine_isolee):
+    (_racine_isolee / "icone.ico").write_bytes(b"")
+    systeme_windows.creer_raccourci(str(tmp_path))
+    lnk = tmp_path / "Bifurq AIO.lnk"
+    lu = subprocess.run(["powershell", "-NoProfile", "-Command",
+                         "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%s');"
+                         "$s.TargetPath;$s.Arguments;$s.WorkingDirectory" % str(lnk).replace("'", "''")],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.splitlines()
+    assert lu == [os.path.join(str(_racine_isolee), "config", "venv", "Scripts", "pythonw.exe"),
+                  "-m veille_ia.installer.server", str(_racine_isolee)]
 
 
 # --- macOS ----------------------------------------------------------------------------------------
