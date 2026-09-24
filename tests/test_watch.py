@@ -36,8 +36,8 @@ def _simuler(monkeypatch, plan, lignes, fin=FIN, inconnue=True):
     monkeypatch.setattr(sitemap, "plan_de_site", lambda racines, journal, strict=False: set(plan))
     monkeypatch.setattr(gsc_api, "dernier_jour", lambda chemin, propriete: fin)
 
-    def donnees(chemin, propriete, debut, fin_, dims):
-        appels.append((debut, fin_))
+    def donnees(chemin, propriete, debut, fin_, dims, frais=False):
+        appels.append((debut, fin_, frais))
         return lignes
     monkeypatch.setattr(gsc_api, "donnees", donnees)
     monkeypatch.setattr(gsc_api, "inspecter", lambda chemin, url, propriete: {
@@ -68,15 +68,16 @@ def test_aucune_page_ne_ressemble_previent_sans_cible(monkeypatch):
     assert r["a_rediriger"][0]["sure"] is False
 
 
-def test_cumul_sur_trois_mois_avant_la_derniere_date_publiee(monkeypatch):
-    """Régression du 24.09.2026 : le cumul partait du jour de connexion, après la
-    dernière date publiée, et la Search Console refusait la requête."""
+def test_une_seule_lecture_des_7_derniers_jours_en_donnees_fraiches(monkeypatch):
+    """Le 24.09.2026 : l'IA de Google ne cite une adresse inventée que quelques jours, les
+    3 mois lus jusque-là ne servaient à rien et les données définitives arrivaient trop tard."""
     appels = _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"},
                       [{"URL": ADRESSE, "Impressions": 40}])
     watch.veille_site("exemple", _site(), _ControleurHTTPFactice({ADRESSE: 404}), lambda m: None, AUJOURD_HUI)
-    for debut, fin in appels:
-        assert debut <= fin == FIN
-    assert (datetime.date.fromisoformat(FIN) - datetime.date.fromisoformat(appels[0][0])).days == watch.FENETRE_JOURS - 1
+    assert len(appels) == 1
+    debut, fin, frais = appels[0]
+    assert fin == FIN and frais is True
+    assert (datetime.date.fromisoformat(FIN) - datetime.date.fromisoformat(debut)).days == 6
 
 
 def test_sous_le_seuil_rien_a_corriger_mais_signale(monkeypatch):

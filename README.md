@@ -12,8 +12,8 @@ Windows.
 
 **Ce qu'il fait à chaque analyse :**
 1. il cherche les adresses de votre site qui remplissent quatre conditions : Google les a
-   affichées ces 7 derniers jours et au moins 15 fois en 3 mois ; elles sont absentes du plan de
-   site ; Google ne les a jamais explorées ; elles répondent en erreur 404 ou 410 ;
+   affichées au moins 15 fois ces 7 derniers jours, jusqu'à la veille ; elles sont absentes du plan
+   de site ; Google ne les a jamais explorées ; elles répondent en erreur 404 ou 410 ;
 2. il cherche dans votre plan de site la page qui ressemble le plus à chaque adresse inventée ;
 3. il propose cette page comme destination de la redirection quand elle est assez proche. Vous
    choisissez la destination quand aucune page ne ressemble assez.

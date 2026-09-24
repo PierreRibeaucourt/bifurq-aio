@@ -1,4 +1,4 @@
 {
-  "version": "0.3.1",
-  "nouveautes": "Des boutons plus légers dans Vos sites : une icône pour analyser un site et une icône pour le modifier."
+  "version": "0.4.0",
+  "nouveautes": "L'analyse lit les 7 derniers jours de la Search Console, jusqu'à la veille. Une adresse inventée est repérée deux jours plus tôt."
 }

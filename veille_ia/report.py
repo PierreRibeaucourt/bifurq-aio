@@ -171,7 +171,7 @@ def csv_adresses(es):
     les boutons de copie les donnent, prêtes pour un menu de redirection."""
     sortie = io.StringIO()
     w = csv.writer(sortie, delimiter=";", lineterminator="\n")
-    w.writerow(["Adresse inventée", "Rediriger vers", "Confiance", "Vues (3 mois)"])
+    w.writerow(["Adresse inventée", "Rediriger vers", "Confiance", "Vues (7 jours)"])
     for d in _tries(es):
         w.writerow([d["chemin"], d["cible_proposee"] if d.get("cible_url") else "", _confiance(d), d["impressions"]])
     return sortie.getvalue()
@@ -227,7 +227,7 @@ def tableau_adresses(es, actions=None, nom_site=""):
 <button class="bouton secondaire petit" type="button" data-csv="%s" data-fichier="%s">%sExporter le tableau</button></div>
 <div class="conteneur-tableau"><table class="recap">
 <colgroup><col class="c-vues"><col><col class="c-fleche"><col><col class="c-confiance">%s</colgroup>
-<thead><tr><th class="n">Vues <small>3 mois</small></th><th>Adresse inventée</th><th><span class="sr">Redirection</span></th>
+<thead><tr><th class="n">Vues <small>7 jours</small></th><th>Adresse inventée</th><th><span class="sr">Redirection</span></th>
 <th>Rediriger vers</th><th>Confiance</th>%s</tr></thead>
 <tbody>%s</tbody></table></div>
 <div class="legende">%s</div>""" % (

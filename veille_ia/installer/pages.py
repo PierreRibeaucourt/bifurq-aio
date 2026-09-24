@@ -79,7 +79,7 @@ def _champ(nom, aide, controle):
 
 def _champ_seuil(seuil):
     return _champ("Nombre de vues minimum avant alerte",
-                  "Une adresse inventée vue moins souvent dans Google en 3 mois n'est pas signalée.",
+                  "Une adresse inventée vue moins souvent dans Google ces 7 derniers jours n'est pas signalée.",
                   '<input class="court" type="number" name="seuil" value="%d" min="1">' % seuil)
 
 

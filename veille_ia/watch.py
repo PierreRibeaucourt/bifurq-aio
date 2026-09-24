@@ -3,9 +3,11 @@
 (config/etat.json), le rapport et les notifications.
 
 Le process, pour chaque site :
-  1. repérer les adresses qui ont des impressions récentes dans la Search Console,
-     absentes du plan de site, que Google n'a jamais explorées (donc inventées), et
-     qui répondent en erreur (404 ou 410) ;
+  1. repérer les adresses affichées ces 7 derniers jours d'après la Search Console
+     (données fraîches, jusqu'à la veille : l'IA de Google cite une adresse inventée
+     quelques jours tout au plus, relevé du 24.09.2026 sur 423 adresses), absentes du
+     plan de site, que Google n'a jamais explorées (donc inventées), et qui répondent
+     en erreur (404 ou 410) ;
   2. chercher, parmi les pages du plan de site, celle qui leur ressemble ;
   3. si une page ressemble assez, la proposer en redirection ; sinon, prévenir
      seulement.
@@ -34,7 +36,6 @@ from . import config, gsc_api, matching, report, sitemap, urls
 from .erreurs import ErreurDonnees, ErreurPlanDeSite, expliquer
 from .http_check import ERREURS, ControleurHTTP, corrigee
 
-FENETRE_JOURS = 90                 # cumul des impressions : les 3 derniers mois publiés
 MAX_INSPECTIONS = 300              # par site et par jour ; quota Google : 2 000
 RECONTROLE_CORRIGEES = 7           # jours entre deux tests d'une adresse déjà corrigée
 DUREE_MAX = 90 * 60                # au-delà, les sites restants sont reportés
@@ -210,13 +211,9 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
         anomalies.append("La Search Console n'a rien publié depuis le %s : l'analyse porte sur des "
                          "données anciennes." % date_fr(fin))
     debut7 = (fin_d - datetime.timedelta(days=6)).isoformat()
-    debut = (fin_d - datetime.timedelta(days=FENETRE_JOURS - 1)).isoformat()
 
-    cumul, recent = collections.Counter(), collections.Counter()
-    for l in gsc_api.donnees(chemin_jeton, cfg["propriete"], debut, fin, ("page",)):
-        if "#" not in l["URL"] and "?" not in l["URL"]:
-            cumul[l["URL"]] += l["Impressions"]
-    for l in gsc_api.donnees(chemin_jeton, cfg["propriete"], debut7, fin, ("page",)):
+    recent = collections.Counter()
+    for l in gsc_api.donnees(chemin_jeton, cfg["propriete"], debut7, fin, ("page",), frais=True):
         if "#" not in l["URL"] and "?" not in l["URL"]:
             recent[l["URL"]] += l["Impressions"]
 
@@ -251,7 +248,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
         return urls.hote(u) in hotes and urls.cle_url(u) not in cles_plan
 
     variantes = collections.defaultdict(set)
-    for u in cumul:
+    for u in recent:
         if hors_plan(u):
             variantes[urls.cle_chemin(u)].add(u)
     actifs = {urls.cle_chemin(u) for u in recent if hors_plan(u)}
@@ -286,7 +283,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     ecartes = {urls.cle_chemin(p) for p in config.lire_ecartees(cle)}
     inventes = {p for p in actifs if any((insp.get(u) or {}).get("coverage") == INCONNUE for u in variantes[p])}
     suspects = {p: sorted(variantes[p]) for p in inventes
-                if p not in ecartes and sum(cumul[u] for u in variantes[p]) >= cfg["seuil_impressions"]}
+                if p not in ecartes and sum(recent[u] for u in variantes[p]) >= cfg["seuil_impressions"]}
     sous_seuil = len([p for p in inventes if p not in ecartes and p not in suspects])
 
     # contrôle HTTP : une adresse en erreur une fois par jour, une adresse corrigée tous les
@@ -355,14 +352,14 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
         ecart = score - (notes[1][0] if len(notes) > 1 else 0.0)
         cible = notes[0][1] if notes and score >= SEUIL_PROPOSITION else ""
         a_rediriger.append({"chemin": urls.chemin(exemple), "cle": p, "adresse": exemple,
-                            "impressions": sum(cumul[u] for u in us), "impressions_7j": sum(recent[u] for u in us),
+                            "impressions": sum(recent[u] for u in us),
                             "cible_url": cible, "cible_proposee": urls.chemin(cible) if cible else "",
                             "sure": bool(cible) and score >= SEUIL_SURE and ecart >= ECART_SUR,
                             "ressemblance": round(score, 2)})
     a_rediriger.sort(key=lambda d: -d["impressions"])
     if sous_seuil:
         s = "s" if sous_seuil > 1 else ""
-        infos.append("%d adresse%s inventée%s repérée%s, vue%s moins de %d fois dans Google en 3 mois : "
+        infos.append("%d adresse%s inventée%s repérée%s, vue%s moins de %d fois dans Google ces 7 derniers jours : "
                      "pas assez pour justifier une redirection."
                      % (sous_seuil, s, s, s, s, cfg["seuil_impressions"]))
 

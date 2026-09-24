@@ -262,6 +262,7 @@ def test_mettre_a_jour_telecharge_puis_lance_l_installateur_une_seule_fois(serve
     monkeypatch.setattr(mise_a_jour, "telecharger", lambda v: telecharges.append(v) or "C:/code")
     monkeypatch.setattr(mise_a_jour, "lancer_installateur", lambda dossier, port: lances.append((dossier, port)))
     monkeypatch.setattr(server.threading, "Timer", _TimerImmediat)
+    monkeypatch.setattr(server, "analyse_active", lambda: False)     # une analyse d'un autre test ne gêne pas
     jeton = {"jeton": server._session["jeton_formulaire"]}
     code, corps, _ = _requete(serveur, "POST", "/mettre-a-jour", jeton)
     assert code == 200 and "Mise à jour en cours" in corps and "Installation de la version" in corps

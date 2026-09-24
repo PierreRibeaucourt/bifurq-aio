@@ -53,11 +53,14 @@ def lister_proprietes(chemin_jeton):
     return _appel(chemin_jeton, BASE_WEBMASTERS + "/sites").get("siteEntry") or []
 
 
-def donnees(chemin_jeton, propriete, debut, fin, dimensions=("page",), limite=25000):
+def donnees(chemin_jeton, propriete, debut, fin, dimensions=("page",), limite=25000, frais=False):
     """Une ligne par valeur de dimension. ("page",) -> {"URL", "Clics", "Impressions",
-    "CTR", "Position"} ; ("date",) -> {"Date", ...}."""
+    "CTR", "Position"} ; ("date",) -> {"Date", ...}. frais=True : données fraîches
+    (dataState "all"), publiées avec un jour de retard au lieu de trois."""
     url = "%s/sites/%s/searchAnalytics/query" % (BASE_WEBMASTERS, urllib.parse.quote(propriete, safe=""))
     corps = {"startDate": debut, "endDate": fin, "dimensions": list(dimensions), "rowLimit": limite}
+    if frais:
+        corps["dataState"] = "all"
     r = _appel(chemin_jeton, url, "POST", corps)
     noms = [_NOMS_DIMENSION.get(d, d) for d in dimensions]
     out = []
@@ -72,10 +75,12 @@ def donnees(chemin_jeton, propriete, debut, fin, dimensions=("page",), limite=25
 
 
 def dernier_jour(chemin_jeton, propriete):
-    """Dernière date publiée par la Search Console (souvent J-3), ou None si le site
-    n'a eu aucune impression sur les 10 derniers jours."""
+    """Dernier jour complet des données fraîches de la Search Console : la veille en
+    général (le jour en cours n'en a qu'une partie). None si le site n'a eu aucune
+    impression sur les 10 derniers jours."""
     auj = datetime.date.today()
-    L = donnees(chemin_jeton, propriete, str(auj - datetime.timedelta(days=10)), str(auj), ("date",))
+    hier = str(auj - datetime.timedelta(days=1))
+    L = donnees(chemin_jeton, propriete, str(auj - datetime.timedelta(days=10)), hier, ("date",), frais=True)
     return max(x["Date"] for x in L) if L else None
 
 

@@ -358,8 +358,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "Mise à jour impossible", "La version %s n'a pas pu être téléchargée. Vérifiez votre connexion "
                 "à Internet et réessayez." % maj["version"]), 502)
         _session["mise_a_jour"] = maj["version"]
-        self._repondre(pages.mise_a_jour_en_cours(maj["version"], EMPREINTE))
+        # programmé avant la réponse, lancé une seconde après : la page d'attente est partie
+        # avant que l'installateur n'arrête cette interface
         threading.Timer(1.0, mise_a_jour.lancer_installateur, (dossier_code, self.server.server_port)).start()
+        self._repondre(pages.mise_a_jour_en_cours(maj["version"], EMPREINTE))
 
     def _analyser(self, champs):
         """Sans champ cle : tous les sites. Avec : ces sites seulement (bouton d'un site, ou
