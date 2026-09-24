@@ -195,8 +195,8 @@ def test_protection_anti_robots_nommee_et_rien_de_conclu(monkeypatch):
     r = watch.veille_site("exemple", _site(), bloque, lambda m: None, AUJOURD_HUI)
     assert r["a_rediriger"] == [] and r["resolues"] == [] and r["protection"] == "DataDome"
     assert r["anomalies"] == ["Votre site bloque l'outil (protection anti-robots DataDome) : 1 adresse n'a pas pu "
-                              "être testée. Pour le laisser passer, ajoutez l'adresse IP de cet ordinateur en "
-                              "exception dans DataDome."]
+                              "être testée. Ajoutez l'adresse IP de cet ordinateur en exception dans DataDome "
+                              "pour laisser passer l'outil."]
     etat = watch._etat_du_site(r, set(), {}, "2026-09-24T10:00")
     assert etat["statut"] == "incomplet" and etat["protection"] == "DataDome"
 

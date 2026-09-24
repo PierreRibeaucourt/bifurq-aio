@@ -326,9 +326,9 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     if bloquees:
         n, r["protection"] = len(bloquees), bloquees[0]["protection"]
         anomalies.append("Votre site bloque l'outil (protection anti-robots %s) : %d adresse%s n'%s pas pu "
-                         "être testée%s. Pour le laisser passer, ajoutez l'adresse IP de cet ordinateur en "
-                         "exception dans %s." % (r["protection"], n, "s" if n > 1 else "", "ont" if n > 1 else "a",
-                                                 "s" if n > 1 else "", r["protection"]))
+                         "être testée%s. Ajoutez l'adresse IP de cet ordinateur en exception dans %s pour "
+                         "laisser passer l'outil." % (r["protection"], n, "s" if n > 1 else "",
+                                                      "ont" if n > 1 else "a", "s" if n > 1 else "", r["protection"]))
     n = len(non_controlees) - len(bloquees)
     if n:
         anomalies.append("%d adresse%s n'%s pas pu être testée%s sur votre site (réponse bloquée ou "

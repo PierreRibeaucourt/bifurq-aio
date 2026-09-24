@@ -21,9 +21,9 @@ Windows.
 
 L'outil ne modifie rien sur votre site. Vous posez vous-même les redirections.
 
-**Ce qu'il ne signale pas** : les pages supprimées sans redirection. Google les connaissait, et la
-Search Console les liste déjà (rapport **Pages**, motif « Introuvable (404) »). Le détail, et la
-façon dont l'outil vérifie chaque adresse : [comment fonctionne l'outil](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html).
+Les pages supprimées sans redirection ne sont pas signalées. Google les a explorées quand elles
+existaient et la Search Console les liste dans le rapport **Pages** au motif **Introuvable (404)**.
+Le détail de l'analyse est sur la page [Comment fonctionne l'outil](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html).
 
 ## Installation
 
@@ -96,17 +96,17 @@ Windows et supprimez la tâche **Bifurq AIO**.
 
 - **Windows demande avec quelle application ouvrir `installer`** : Python n'est pas installé.
   Installez-le (étape 1 de l'installation), puis double-cliquez à nouveau sur `installer`.
-- **Une fenêtre « L'installation n'a pas pu se terminer » s'affiche** : le détail est dans
+- **Une fenêtre *L'installation n'a pas pu se terminer* s'affiche** : le détail est dans
   `%LOCALAPPDATA%\Bifurq AIO\config\installation.log`, à joindre si vous signalez le
   problème.
 - **Aucun site trouvé après la connexion** : le compte Google choisi n'a pas accès à la Search
   Console du site. Ajoutez-le comme utilisateur sur
   [search.google.com/search-console](https://search.google.com/search-console), puis
   reconnectez-vous.
-- **« Votre site bloque l'outil » s'affiche sous un site** : une protection anti-robots
-  (Cloudflare, DataDome, Akamai...) répond à la place de votre site, et l'outil ne peut pas
-  tester ses adresses. Autorisez l'adresse IP de votre ordinateur dans cette protection : voir
-  [si votre site est protégé contre les robots](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html#site-protege).
+- **Le message *Votre site bloque l'outil* s'affiche sous un site** : une protection
+  anti-robots comme Cloudflare, DataDome ou Akamai répond à la place de votre site. L'outil ne
+  peut alors pas tester ses adresses. Autorisez l'adresse IP de votre ordinateur dans cette
+  protection en suivant [la marche à suivre](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html#site-protege).
 - **L'outil ne répond plus dans le navigateur** : il s'arrête seul après 45 minutes sans usage.
   Rouvrez-le avec le raccourci du bureau.
 
