@@ -11,6 +11,7 @@ def _fichiers_python():
                 if f.endswith(".py"):
                     yield os.path.join(base, f)
     yield os.path.join(RACINE, "lancer_veille.pyw")
+    yield os.path.join(RACINE, "installer.pyw")
 
 
 def test_tous_les_fichiers_compilent():

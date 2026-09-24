@@ -22,14 +22,11 @@ L'outil ne modifie rien sur votre site. Vous posez vous-même les redirections.
 
 **Windows uniquement pour l'instant.**
 
-1. Téléchargez ce dépôt (bouton **Code** puis **Download ZIP** sur GitHub).
-2. **Avant de le décompresser**, débloquez le fichier ZIP : clic droit dessus, **Propriétés**,
-   cochez **Débloquer** en bas de l'onglet **Général**, puis **OK**. Sans cela, Windows 11 peut
-   bloquer l'installateur. Décompressez ensuite le ZIP.
-3. Double-cliquez sur `installer.bat`.
-4. Si Python manque, la page de téléchargement s'ouvre. Installez-le en cochant la case
-   **Add python.exe to PATH**, puis relancez `installer.bat`.
-5. L'outil s'ouvre dans votre navigateur. Un raccourci **Veille des adresses inventées** est
+1. Si Python n'est pas encore installé sur votre ordinateur : téléchargez-le sur
+   [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
+2. Téléchargez ce dépôt (bouton **Code** puis **Download ZIP** sur GitHub) et décompressez-le.
+3. Double-cliquez sur **installer** (le fichier `installer.pyw`).
+4. L'outil s'ouvre dans votre navigateur. Un raccourci **Veille des adresses inventées** est
    ajouté sur votre bureau pour y revenir plus tard.
 
 ## Première utilisation
@@ -82,13 +79,10 @@ Windows et supprimez la tâche **Veille adresses inventees IA**.
 
 ## Dépannage
 
-- **Windows bloque `installer.bat`** (« Contrôle intelligent des applications a bloqué ce
-  fichier » ou « Windows a protégé votre ordinateur ») : Windows se méfie des fichiers
-  téléchargés. Supprimez le dossier décompressé, débloquez le fichier ZIP (clic droit,
-  **Propriétés**, cochez **Débloquer**, **OK**), puis décompressez-le à nouveau.
-- **Rien ne se passe au lancement de `installer.bat`** : une fenêtre noire doit s'ouvrir. Si elle
-  se ferme aussitôt, lancez `installer.bat` depuis une invite de commandes (`cmd`) pour lire le
-  message d'erreur.
+- **Windows demande avec quelle application ouvrir `installer`** : Python n'est pas installé.
+  Installez-le (étape 1 de l'installation), puis double-cliquez à nouveau sur `installer`.
+- **Une fenêtre « L'installation n'a pas pu se terminer » s'affiche** : le détail est dans
+  `config\installation.log`, à joindre si vous signalez le problème.
 - **Aucun site trouvé après la connexion** : le compte Google choisi n'a pas accès à la Search
   Console du site. Ajoutez-le comme utilisateur sur
   [search.google.com/search-console](https://search.google.com/search-console), puis

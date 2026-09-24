@@ -3,7 +3,7 @@
 ## Principe : bibliothèque standard d'abord
 
 Le paquet `veille_ia` ne dépend d'aucun paquet tiers (voir `requirements.txt`). C'est
-volontaire : un utilisateur non technique lance `installer.bat`, et rien ne doit pouvoir échouer
+volontaire : un utilisateur non technique lance `installer.pyw`, et rien ne doit pouvoir échouer
 à cause d'un paquet indisponible sur son réseau. Avant d'ajouter une dépendance, chercher une
 solution avec `urllib`, `http.server`, `json`, `difflib`, etc. Si une dépendance est vraiment
 nécessaire, en discuter dans une issue d'abord.

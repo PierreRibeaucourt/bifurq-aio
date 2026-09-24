@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Raccourci sur le bureau pour rouvrir l'outil sans repasser par installer.bat.
+"""Raccourci sur le bureau pour rouvrir l'outil sans repasser par installer.pyw.
 
   python -m veille_ia.raccourci"""
 import os
@@ -38,5 +38,5 @@ if __name__ == "__main__":
         creer_raccourci()
         print("Raccourci ajoute sur le bureau.")
     except Exception:
-        print("Le raccourci n'a pas pu etre cree. Relancez installer.bat pour rouvrir l'outil.")
+        print("Le raccourci n'a pas pu etre cree. Relancez installer.pyw pour rouvrir l'outil.")
         sys.exit(0)
