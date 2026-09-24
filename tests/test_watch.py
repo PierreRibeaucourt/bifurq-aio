@@ -219,3 +219,29 @@ def test_erreur_confirmee_pas_retestee_le_meme_jour(monkeypatch):
             raise AssertionError("adresse retestée")
     r = watch.veille_site("exemple", _site(), _Interdit(), lambda m: None, AUJOURD_HUI)
     assert len(r["a_rediriger"]) == 1
+
+
+def test_analyse_d_un_seul_site_garde_les_autres(monkeypatch):
+    for cle in ("a", "b"):
+        config.ajouter_site(cle, nom=cle + ".fr", propriete="sc-domain:%s.fr" % cle,
+                            sitemaps=["https://%s.fr/sitemap.xml" % cle])
+    watch._ecrire_json(watch.chemin_etat(), {"a": {"statut": "ok", "date": "2026-01-01T09:00"},
+                                             "b": {"statut": "ok", "date": "2026-01-01T09:00"}})
+    jour = os.path.join(config.dossier_config(), "veille_%s.json" % AUJOURD_HUI)
+    watch._ecrire_json(jour, {"date": AUJOURD_HUI, "resultats": [{"site": "a"}, {"site": "b"}], "echecs": {},
+                              "reportes": []})
+    analyses = []
+
+    def veille_site(cle, cfg, controleur, journal, aujourd_hui=None, etape=None):
+        analyses.append(cle)
+        return {"site": cle, "fin_gsc": FIN, "a_rediriger": [], "anomalies": ["incomplet"], "infos": [],
+                "resolues": []}
+    monkeypatch.setattr(watch, "veille_site", veille_site)
+    from veille_ia import notify_windows
+    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: True)
+    watch.executer(interactif=True, cles=["b"])
+    assert analyses == ["b"]
+    etat = watch.lire_etat()
+    assert etat["a"]["statut"] == "ok" and etat["a"]["date"] == "2026-01-01T09:00"
+    assert etat["b"]["statut"] == "incomplet"
+    assert [r["site"] for r in watch._lire_json(jour, {})["resultats"]] == ["a", "b"]

@@ -65,13 +65,14 @@ def analyse_active():
     return (f is not None and f.is_alive()) or watch.analyse_en_cours()
 
 
-def lancer_analyse():
+def lancer_analyse(cles=None):
+    """cles : les sites à analyser, ou None pour tous."""
     if analyse_active():
         return False
 
     def travail():
         try:
-            watch.executer(interactif=True)
+            watch.executer(interactif=True, cles=cles)
         except Exception:
             _journal(traceback.format_exc())
     f = threading.Thread(target=travail, daemon=True)
@@ -289,8 +290,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         sites = config.lire()["sites"]
         if cle not in sites:
             return self._rediriger("/")
-        self._repondre(pages.page_site(cle, sites[cle], watch.lire_etat().get(cle) or {}, analyse_active(),
-                                       _session["jeton_formulaire"], len(config.lire_ecartees(cle))))
+        en_cours = analyse_active()
+        du_site = en_cours and (watch.lire_progression() or {}).get("site") == sites[cle]["nom"]
+        self._repondre(pages.page_site(cle, sites[cle], watch.lire_etat().get(cle) or {}, en_cours,
+                                       _session["jeton_formulaire"], len(config.lire_ecartees(cle)), du_site))
 
     # --- actions ---
     def _activer(self, champs):
@@ -359,7 +362,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         threading.Timer(1.0, mise_a_jour.lancer_installateur, (dossier_code, self.server.server_port)).start()
 
     def _analyser(self, champs):
-        lancer_analyse()
+        """Sans champ cle : tous les sites. Avec : ces sites seulement (bouton d'un site, ou
+        sites affichés par la recherche et les filtres de Mes sites)."""
+        sites = config.lire()["sites"]
+        demandes = champs.get("cle")
+        cles = [c for c in (demandes or []) if c in sites]
+        if demandes and not cles:                      # sites retirés entre-temps
+            return self._rediriger("/", 303)
+        lancer_analyse(cles or None)
+        if _un(champs, "retour") == "site" and len(cles) == 1:
+            return self._rediriger("/site?cle=%s" % urllib.parse.quote(cles[0]), 303)
         self._rediriger("/", 303)
 
     def _ignorer(self, champs):

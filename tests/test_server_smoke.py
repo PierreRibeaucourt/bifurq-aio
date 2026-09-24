@@ -300,3 +300,41 @@ def test_apres_la_mise_a_jour_mes_sites_le_confirme(serveur):
 def test_options_de_la_nouvelle_interface():
     assert server._arguments(["--port", "51234", "--sans-navigateur"]) == (51234, False)
     assert server._arguments([]) == (server.PORT_PREFERE, True)
+
+
+# --- analyse d'un site ou des sites affichés ---
+def _analyses(monkeypatch):
+    lancees = []
+    monkeypatch.setattr(server, "lancer_analyse", lambda cles=None: lancees.append(cles) or True)
+    return lancees
+
+
+def _deux_sites():
+    for cle in ("a", "b"):
+        config.ajouter_site(cle, nom=cle + ".fr", propriete="sc-domain:%s.fr" % cle, sitemaps=[])
+
+
+def test_analyser_tous_les_sites_ou_seulement_certains(serveur, monkeypatch):
+    _deux_sites()
+    lancees = _analyses(monkeypatch)
+    jeton = ("jeton", server._session["jeton_formulaire"])
+    assert _requete(serveur, "POST", "/analyser", [jeton])[0] == 303
+    assert _requete(serveur, "POST", "/analyser", [jeton, ("cle", "b")])[0] == 303
+    assert _requete(serveur, "POST", "/analyser", [jeton, ("cle", "a"), ("cle", "b")])[0] == 303
+    assert lancees == [None, ["b"], ["a", "b"]]
+
+
+def test_analyser_depuis_la_page_du_site_y_revient(serveur, monkeypatch):
+    _deux_sites()
+    _analyses(monkeypatch)
+    code, _, lieu = _requete(serveur, "POST", "/analyser", [("jeton", server._session["jeton_formulaire"]),
+                                                            ("cle", "a"), ("retour", "site")])
+    assert code == 303 and lieu == "/site?cle=a"
+
+
+def test_analyser_un_site_retire_ne_lance_rien(serveur, monkeypatch):
+    _deux_sites()
+    lancees = _analyses(monkeypatch)
+    code, _, lieu = _requete(serveur, "POST", "/analyser", [("jeton", server._session["jeton_formulaire"]),
+                                                            ("cle", "disparu")])
+    assert code == 303 and lieu == "/" and lancees == []

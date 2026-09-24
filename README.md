@@ -55,7 +55,10 @@ recharge. Vos sites, connexions Google et réglages sont conservés.
 ## Au quotidien
 
 - **Vos sites** : un panneau par site donne son état (tout va bien, nombre d'adresses à
-  corriger, problème). Le bouton **Analyser maintenant** relance une analyse à la demande.
+  corriger, problème). Les sites à traiter s'affichent en premier. Le bouton **Analyser** d'un
+  site relance l'analyse de ce seul site. **Analyser maintenant** relance celle de tous les sites.
+- **Recherche et filtres** : à partir de 7 sites, un champ de recherche et des filtres par état
+  apparaissent au-dessus de la liste. Le bouton du haut analyse alors les sites affichés.
 - **Voir les adresses** : un tableau liste les adresses inventées de la plus vue à la moins vue.
   Il indique pour chacune la page proposée et un niveau de confiance (**Sûre** ou
   **À vérifier**). Un bouton copie chaque adresse pour la coller dans votre outil de redirection.
