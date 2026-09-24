@@ -20,12 +20,23 @@ nécessaire, en discuter dans une issue d'abord.
 - `veille_ia/watch.py` : orchestrateur, un passage de veille pour tous les sites configurés.
 - `veille_ia/config.py` : lecture/écriture de `config/sites.json`.
 - `veille_ia/installer/` : serveur web local (installation, gestion), zéro dépendance.
-- `installer.pyw` : copie l'outil dans `%LOCALAPPDATA%\Bifurq AIO` (mise à jour si déjà
-  installé, sites conservés), puis `veille_ia/installation.py` crée le raccourci et remet la tâche
-  planifiée sur ce dossier. Pour développer, lancer plutôt l'interface depuis le dépôt :
-  `python -m veille_ia.installer.server` (configuration dans `config\` du dépôt, non versionnée).
-- `icone.ico` : icône du raccourci, même panneau de déviation que le logo (`veille_ia/style.py`).
-- `scripts_windows/` : PowerShell, notification et tâche planifiée.
+- `veille_ia/plateforme.py` : ce qui change d'un système à l'autre (dossier d'installation,
+  Python de l'environnement, raccourci, analyses planifiées, notifications). Le reste du code passe
+  par ce module. Une implémentation par système :
+  - `systeme_windows.py` : tâche planifiée et notification par les scripts PowerShell de
+    `scripts_windows/`, raccourci sur le bureau ;
+  - `systeme_mac.py` : application dans `~/Applications`, agents launchd, notifications par
+    osascript ;
+  - `systeme_linux.py` : lanceur `.desktop`, minuteries systemd de l'utilisateur (cron à défaut),
+    notifications par notify-send.
+- `installer.pyw` : copie l'outil dans le dossier de l'utilisateur (`plateforme.dossier_installation`,
+  mise à jour si déjà installé, sites conservés), puis `veille_ia/installation.py` crée le raccourci
+  et remet les analyses planifiées sur ce dossier. Sous Windows, l'utilisateur le lance d'un
+  double-clic. Sur macOS et Linux, `docs/installer.sh` le télécharge et le lance (la ligne
+  `curl ... | sh` du site). Pour développer, lancer plutôt l'interface depuis le dépôt :
+  `python -m veille_ia.installer.server` (configuration dans `config/` du dépôt, non versionnée).
+- `icone.ico`, `icone.icns`, `icone.png` : icône du raccourci (Windows, macOS, Linux), même
+  panneau de déviation que le logo (`veille_ia/style.py`).
 
 ## Publier une version
 
@@ -37,6 +48,7 @@ Le bouton télécharge le ZIP de l'étiquette `v<numéro>` du dépôt et lance s
 2. Mettre le même numéro dans `docs/version.json`, avec une ou deux phrases sur les nouveautés.
    Elles s'affichent dans le bandeau.
 3. Pointer le bouton **Télécharger pour Windows** de `docs/index.html` sur la nouvelle étiquette.
+   `docs/installer.sh` (macOS et Linux) lit lui-même le numéro dans `docs/version.json`.
 4. Lancer les tests : `tests/test_mise_a_jour.py` vérifie que ces trois numéros concordent.
 5. Publier le commit et l'étiquette dans le même envoi :
 
@@ -50,11 +62,17 @@ Un envoi sur `main` sans changement de numéro ne propose rien aux outils instal
 ## Lancer les tests
 
 ```
-config\venv\Scripts\python.exe -m pytest tests\
+python -m pytest tests
 ```
 
-(ou `python -m pytest tests\` dans un environnement où les dépendances de test sont installées ;
-`pytest` lui-même est une dépendance de développement, pas une dépendance de l'outil).
+`pytest` est une dépendance de développement, pas une dépendance de l'outil.
+
+GitHub Actions (`.github/workflows/tests.yml`) lance les tests sous Windows, macOS et Linux, et
+avec Python 3.8, la plus ancienne version acceptée. Il installe aussi réellement l'outil sur macOS
+(Python de Homebrew et Python de python.org) et sur Ubuntu avec `.github/essai_installation.sh` :
+installation par `installer.sh`, interface, raccourci, planification, analyse planifiée,
+notification, mise à jour. Chaque vérification ratée apparaît en annotation dans le résumé du
+passage.
 
 ## Signaler un faux positif ou un faux négatif de détection
 

@@ -58,6 +58,35 @@ h3{font-size:19px;line-height:1.2}
 .croix{background:var(--rouge);color:#fff}
 .fleche{background:var(--noir);color:var(--jaune)}
 
+/* choix du système : onglets à logos, puis le bouton ou la ligne à coller dans le Terminal.
+   Sans JavaScript, les trois systèmes s'affichent l'un sous l'autre. */
+.installer{max-width:580px}
+.systemes{display:inline-flex;gap:4px;padding:4px;margin-bottom:16px;background:var(--surface);
+  border:1px solid var(--trait);border-radius:5px}
+.systemes[hidden],.systeme[hidden]{display:none}
+.systemes button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border:0;
+  border-radius:3px;background:transparent;color:var(--doux);font:600 15px/1 var(--police);cursor:pointer}
+.systemes button:hover{color:var(--texte);background:var(--fond)}
+.systemes button[aria-selected=true]{background:var(--noir);color:#fff}
+.logo-systeme{width:18px;height:18px;flex:none;fill:currentColor}
+.systeme+.systeme{margin-top:24px}
+.installer.onglets .systeme{margin-top:0}
+.consigne-systeme{margin:0 0 10px;font-weight:600}
+.commande{display:flex;align-items:stretch;min-height:50px;background:var(--noir);border-radius:3px;overflow:hidden}
+.commande code{flex:1;min-width:0;align-self:center;padding:12px 16px;color:#fff;font-size:14px;line-height:1.5}
+.commande button{flex:none;border:0;background:var(--jaune);color:var(--noir);font:600 15px/1 var(--police);
+  padding:0 20px;cursor:pointer}
+.commande button:hover{background:var(--jaune-fonce)}
+.installer>.note{margin-top:18px}
+
+.installations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.installations h3{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.installations .logo-systeme{width:22px;height:22px}
+.installations ol{margin:0;padding-left:20px}
+.installations li{margin-bottom:8px}
+.installations li:last-child{margin-bottom:0}
+.ligne-installation{margin-top:16px;max-width:760px}
+
 section.bloc{margin-top:56px}
 section.bloc>h2{margin-bottom:14px}
 ol.etapes{list-style:none;counter-reset:etape;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;
@@ -101,13 +130,16 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 
 @media (max-width:860px){
   .accueil{grid-template-columns:1fr;gap:36px}
-  ol.etapes{grid-template-columns:1fr}
+  ol.etapes,.installations{grid-template-columns:1fr}
 }
 @media (max-width:640px){
   h1{font-size:34px}h2{font-size:23px}
   .page{padding:26px 16px 48px}.bandeau-int{padding:12px 16px}
   .chapo{font-size:17px}
   .bouton{width:100%}
+  .systemes{display:flex}.systemes[hidden]{display:none}
+  .systemes button{flex:1;justify-content:center;padding:0 8px}
+  .commande code{font-size:13px;padding:10px 12px}
   .auteur{grid-template-columns:1fr;gap:18px;padding:34px 20px 24px}
   .avatar{width:76px;height:76px;font-size:32px}
 }

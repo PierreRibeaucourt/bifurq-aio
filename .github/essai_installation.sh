@@ -13,7 +13,7 @@ ko() { printf '::error title=%s::%s\n' "$1" "$(printf '%s' "$2" | tr '\n' ' ' | 
 etape() { printf '\n===== %s\n' "$1"; }
 verifier() {                        # verifier "description" commande...
     description=$1; shift
-    if sortie=$("$@" 2>&1); then ok "$description"; else ko "$description" "$sortie"; fi
+    if resultat=$("$@" 2>&1); then ok "$description"; else ko "$description" "$resultat"; fi
 }
 pid_interface() { python3 -c "import json;print(json.load(open('$D/config/serveur.json'))['pid'])" 2>/dev/null; }
 attendre_interface() {              # attendre_interface [pid à voir remplacé]
@@ -28,7 +28,7 @@ attendre_interface() {              # attendre_interface [pid à voir remplacé]
 
 SYSTEME=$(uname)
 # PYTHON_ESSAI : un Python précis (celui de python.org), trouvé en premier par installer.sh
-if [ -n "${PYTHON_ESSAI:-}" ]; then PATH="$(dirname "$PYTHON_ESSAI"):$PATH"; export PATH; fi
+if [ -n "${PYTHON_ESSAI:-}" ]; then PATH="$(dirname "$PYTHON_ESSAI"):$PATH"; export PATH; unset SSL_CERT_FILE SSL_CERT_DIR; fi
 PYTHON=$(command -v python3)
 echo "Système : $SYSTEME, Python : $PYTHON ($($PYTHON --version 2>&1))"
 if [ "$SYSTEME" = "Darwin" ]; then

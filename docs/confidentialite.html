@@ -39,7 +39,7 @@ n'envoie rien à son auteur. Vous pouvez retirer son accès à tout moment depui
 
 <h2>Qui publie l'outil</h2>
 <p>Bifurq AIO est un logiciel gratuit et open source, publié par Pierre Ribeaucourt à
-titre personnel, sous licence MIT. Il s'installe et fonctionne sur votre ordinateur Windows. Il n'existe aucun
+titre personnel, sous licence MIT. Il s'installe et fonctionne sur votre ordinateur. Il n'existe aucun
 service en ligne associé : l'auteur n'exploite aucun serveur qui recevrait vos données.</p>
 
 <h2>Les données Google que l'outil lit</h2>
@@ -66,14 +66,14 @@ des services d'API Google</a>, y compris les exigences d'utilisation limitée.</
 
 <h2>Où les données sont conservées</h2>
 <p>Uniquement sur votre ordinateur, dans le dossier de l'outil
-(<code>%LOCALAPPDATA%\Bifurq AIO\config</code>) :</p>
+(<code>config</code>, dans le dossier de l'outil : <code>%LOCALAPPDATA%\Bifurq AIO</code> sous Windows, <code>~/Library/Application Support/Bifurq AIO</code> sur Mac, <code>~/.local/share/bifurq-aio</code> sous Linux) :</p>
 <ul>
 <li>la connexion Google de chaque site (<code>config\&lt;site&gt;\jeton_gsc.json</code>), qui permet à l'outil
 de relancer l'analyse sans vous redemander de vous connecter ;</li>
 <li>les résultats d'inspection et de vérification des adresses, gardés pour ne pas refaire les mêmes demandes ;</li>
 <li>les rapports d'analyse des 60 derniers jours, et un journal technique de fonctionnement.</li>
 </ul>
-<p>Ces fichiers ne sont envoyés nulle part. Toute personne qui utilise votre session Windows peut les lire :
+<p>Ces fichiers ne sont envoyés nulle part. Toute personne qui utilise votre session peut les lire :
 protégez l'accès à votre ordinateur comme pour n'importe quel autre fichier personnel.</p>
 
 <h2>Ce qui sort de votre ordinateur</h2>
@@ -97,7 +97,7 @@ suivi.</p>
 <ul>
 <li><b>Retirer un site</b> : dans l'outil, <b>Modifier</b> puis <b>Retirer ce site</b>. Ses données locales,
 connexion Google comprise, sont effacées.</li>
-<li><b>Tout effacer</b> : supprimez le dossier <code>%LOCALAPPDATA%\Bifurq AIO</code>.</li>
+<li><b>Tout effacer</b> : supprimez le dossier de l'outil.</li>
 <li><b>Retirer l'accès côté Google</b> : sur
 <a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>, choisissez
 <b>Bifurq AIO</b> puis supprimez son accès. L'outil ne pourra plus rien lire tant que vous ne
