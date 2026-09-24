@@ -106,6 +106,8 @@ button:focus-visible{outline:2px solid var(--noir);outline-offset:2px;box-shadow
 .site-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .bloc-site{margin-top:30px}
 .carte-site[hidden]{display:none}
+.bouton svg{flex:none}
+.bouton.icone{width:40px;padding:0}
 
 /* Mes sites, longue liste : recherche et filtres par état, discrets */
 .outils-sites{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:22px 0 0}

@@ -1,4 +1,4 @@
 {
-  "version": "0.3.0",
-  "nouveautes": "Un bouton Analyser sur chaque site. Les sites à traiter s'affichent en premier. À partir de 7 sites, une recherche et des filtres par état aident à s'y retrouver."
+  "version": "0.3.1",
+  "nouveautes": "Des boutons plus légers dans Vos sites : une icône pour analyser un site et une icône pour le modifier."
 }
