@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Erreurs qui arrêtent l'analyse d'un site, avec un message lisible par n'importe
 qui et, quand l'utilisateur peut la régler lui-même, l'action à lui proposer."""
+import os
 
 
 class ErreurVeille(RuntimeError):
@@ -37,4 +38,4 @@ def expliquer(exception):
     if isinstance(exception, ErreurVeille):
         return exception.message, exception.action
     return ("Erreur inattendue pendant l'analyse. Le détail technique est dans le fichier "
-            "config\\veille.log.", None)
+            "%s." % os.path.join("config", "veille.log"), None)

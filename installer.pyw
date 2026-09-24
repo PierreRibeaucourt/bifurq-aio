@@ -1,45 +1,76 @@
 # -*- coding: utf-8 -*-
-"""Installateur de l'outil : un double-clic depuis l'Explorateur Windows.
+"""Installateur de l'outil.
 
-Un .pyw plutôt qu'un .bat : le Contrôle intelligent des applications de Windows 11
-bloque les .bat téléchargés (marque "provient d'Internet"), sans bouton pour passer
-outre, alors qu'il laisse Python ouvrir un .pyw. pythonw n'a pas de console : une
-erreur s'affiche dans une boîte de dialogue, jamais en silence.
+Windows : un double-clic depuis l'Explorateur. Un .pyw plutôt qu'un .bat : le Contrôle
+intelligent des applications de Windows 11 bloque les .bat téléchargés (marque
+"provient d'Internet"), sans bouton pour passer outre, alors qu'il laisse Python ouvrir
+un .pyw. pythonw n'a pas de console : une erreur s'affiche dans une boîte de dialogue,
+jamais en silence.
 
-L'outil est copié dans un dossier fixe, %LOCALAPPDATA%\\Bifurq AIO, et non
-lancé depuis le dossier téléchargé : chaque nouveau téléchargement arrive dans un
-dossier différent ("... (1)", "... (2)"), qui deviendrait sinon une installation de
-plus, vide. Relancer un installateur plus récent met donc l'outil à jour en gardant
-ses sites et réglages (config\\), et le dossier téléchargé peut être supprimé.
+macOS et Linux : lancé par installer.sh, la ligne à coller dans le Terminal donnée sur
+le site de l'outil, ou directement avec python3 installer.pyw. Les messages
+s'affichent dans le Terminal.
+
+L'outil est copié dans un dossier fixe (plateforme.dossier_installation :
+%LOCALAPPDATA%\\Bifurq AIO, ~/Library/Application Support/Bifurq AIO ou
+~/.local/share/bifurq-aio), et non lancé depuis le dossier téléchargé : chaque nouveau
+téléchargement arrive dans un dossier différent ("... (1)", "... (2)"), qui deviendrait
+sinon une installation de plus, vide. Relancer un installateur plus récent met donc
+l'outil à jour en gardant ses sites et réglages (config/), et le dossier téléchargé
+peut être supprimé.
 
 Étapes : copie du code, reprise des sites d'une installation faite dans un dossier
-téléchargé (avant ce dossier fixe), environnement Python (config\\venv, sans pip :
-aucune dépendance externe), raccourci du bureau et tâche planifiée remise sur le
-dossier fixe, puis lancement de l'interface, qui s'ouvre dans le navigateur."""
-import ctypes
+téléchargé (avant ce dossier fixe), environnement Python (config/venv, sans pip :
+aucune dépendance externe), raccourci et analyses planifiées remis sur le dossier fixe,
+puis lancement de l'interface, qui s'ouvre dans le navigateur."""
 import io
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
 import sys
+import time
 import traceback
+import urllib.request
 import venv
 
 ICI = os.path.dirname(os.path.abspath(__file__))
-DESTINATION = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local"),
-                           "Bifurq AIO")
-A_COPIER = ("veille_ia", "scripts_windows", "lancer_veille.pyw", "installer.pyw", "icone.ico",
-            "requirements.txt", "LICENSE", "README.md")
+sys.path.insert(0, ICI)                  # le code de ce téléchargement, pas celui d'une autre copie
+from veille_ia import plateforme  # noqa: E402
+
+DESTINATION = plateforme.dossier_installation()
+A_COPIER = ("veille_ia", "scripts_windows", "lancer_veille.pyw", "installer.pyw", "icone.ico", "icone.icns",
+            "icone.png", "requirements.txt", "LICENSE", "README.md")
 A_NE_PAS_REPRENDRE = ("venv", "serveur.json", "_temp_jeton.json", "installation.log")
 TITRE = "Bifurq AIO"
 SANS_FENETRE = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def message(texte, erreur=False):
-    # icône, premier plan et au-dessus des autres fenêtres : le navigateur s'ouvre en même temps
-    ctypes.windll.user32.MessageBoxW(None, texte, TITRE, (0x10 if erreur else 0x40) | 0x10000 | 0x40000)
+    if plateforme.SYSTEME == "windows":
+        import ctypes
+        # icône, premier plan et au-dessus des autres fenêtres : le navigateur s'ouvre en même temps
+        ctypes.windll.user32.MessageBoxW(None, texte, TITRE, (0x10 if erreur else 0x40) | 0x10000 | 0x40000)
+        return
+    print("\n%s\n" % texte, file=sys.stderr if erreur else sys.stdout, flush=True)
+    if erreur and not (sys.stderr and sys.stderr.isatty()):
+        _alerte(texte)                       # mise à jour lancée par l'interface : aucun Terminal
+
+
+def _alerte(texte):
+    """Une erreur visible hors du Terminal (macOS : fenêtre d'alerte ; Linux :
+    notification)."""
+    try:
+        if plateforme.SYSTEME == "mac":
+            subprocess.run(["osascript", "-e", "on run argv", "-e",
+                            "display alert (item 1 of argv) message (item 2 of argv) as critical",
+                            "-e", "end run", TITRE, texte], capture_output=True, timeout=600)
+        elif shutil.which("notify-send"):
+            subprocess.run(["notify-send", "--app-name=" + TITRE, TITRE, texte], capture_output=True, timeout=30)
+    except Exception:
+        pass
 
 
 def meme_dossier(a, b):
@@ -138,20 +169,47 @@ def environnement_valide(dossier_venv):
             for ligne in f:
                 cle, _, valeur = ligne.partition("=")
                 if cle.strip() == "home":
-                    return (os.path.isfile(os.path.join(dossier_venv, "Scripts", "pythonw.exe"))
+                    return (os.path.isfile(plateforme.python_du_venv(dossier_venv))
                             and os.path.isdir(valeur.strip()))
     except OSError:
         pass
     return False
 
 
-def commande_interface(scripts, port=None):
+def commande_interface(dossier_venv, port=None):
     """port : mise à jour lancée depuis l'interface. La nouvelle interface reprend son port
     sans ouvrir d'onglet : la page restée ouverte la retrouve et s'y recharge."""
-    commande = [os.path.join(scripts, "pythonw.exe"), "-m", "veille_ia.installer.server"]
+    commande = [plateforme.python_du_venv(dossier_venv), "-m", "veille_ia.installer.server"]
     if port:
         commande += ["--port", str(port), "--sans-navigateur"]
     return commande
+
+
+def lancer_interface(destination, dossier_venv, port=None):
+    commande = commande_interface(dossier_venv, port)
+    if os.name == "nt":
+        subprocess.Popen(commande, cwd=destination, close_fds=True)
+        return
+    # sa propre session : l'interface survit à la fermeture du Terminal ; sa sortie va
+    # dans son journal
+    with io.open(os.path.join(destination, "config", "serveur.log"), "a", encoding="utf-8") as journal:
+        subprocess.Popen(commande, cwd=destination, close_fds=True, start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=journal, stderr=journal)
+
+
+def adresse_interface(destination, delai=10.0):
+    """Adresse de l'interface lancée, pour le Terminal : le navigateur peut ne pas
+    s'ouvrir tout seul (ordinateur sans écran, navigateur par défaut absent)."""
+    fin = time.time() + delai
+    while time.time() < fin:
+        try:
+            with io.open(os.path.join(destination, "config", "serveur.json"), encoding="utf-8") as f:
+                adresse = "http://127.0.0.1:%d/" % json.load(f)["port"]
+            urllib.request.urlopen(adresse + "ping", timeout=1).close()
+            return adresse
+        except Exception:
+            time.sleep(0.3)
+    return None
 
 
 def installer(source=ICI, destination=DESTINATION, port=None):
@@ -164,18 +222,20 @@ def installer(source=ICI, destination=DESTINATION, port=None):
         copier_outil(source, destination)
         arreter_interface(source)                      # ancienne installation dans ce dossier
         reprise = reprendre_configuration(source, destination)
-    retirer_marques_internet(destination)
+    if plateforme.SYSTEME == "windows":
+        retirer_marques_internet(destination)
     dossier_venv = os.path.join(destination, "config", "venv")
     if not environnement_valide(dossier_venv):
-        venv.create(dossier_venv, clear=True, with_pip=False)
-    scripts = os.path.join(dossier_venv, "Scripts")
-    # raccourci du bureau, tâche planifiée remise sur ce dossier : par le code installé, avec
-    # python.exe sans fenêtre plutôt que pythonw, pour recueillir une éventuelle erreur
-    r = subprocess.run([os.path.join(scripts, "python.exe"), "-m", "veille_ia.installation"], cwd=destination,
-                       capture_output=True, text=True, timeout=180, creationflags=SANS_FENETRE)
+        # liens vers le Python de base hors Windows, comme python3 -m venv : une mise à jour
+        # mineure de Python ne casse pas l'environnement
+        venv.create(dossier_venv, clear=True, with_pip=False, symlinks=os.name != "nt")
+    # raccourci, analyses planifiées remises sur ce dossier : par le code installé, avec
+    # python.exe sans fenêtre plutôt que pythonw sous Windows, pour recueillir une erreur
+    r = subprocess.run([plateforme.python_du_venv(dossier_venv, console=True), "-m", "veille_ia.installation"],
+                       cwd=destination, capture_output=True, text=True, timeout=180, creationflags=SANS_FENETRE)
     if r.returncode != 0:
-        raise RuntimeError("tâche planifiée non mise en place : %s" % (r.stderr or r.stdout).strip()[-600:])
-    subprocess.Popen(commande_interface(scripts, port), cwd=destination, close_fds=True)
+        raise RuntimeError("analyses planifiées non mises en place : %s" % (r.stderr or r.stdout).strip()[-600:])
+    lancer_interface(destination, dossier_venv, port)
     if not depuis_telechargement:
         return None
     if mise_a_jour:
@@ -185,9 +245,13 @@ def installer(source=ICI, destination=DESTINATION, port=None):
                  "précédente ont été repris.")
     else:
         debut = "Bifurq AIO est installé."
-    return ("%s\n\nL'outil s'ouvre dans votre navigateur. Pour le rouvrir plus tard : raccourci "
-            "Bifurq AIO sur votre bureau.\n\nVous pouvez supprimer le fichier ZIP et "
-            "le dossier téléchargés : l'outil n'en a plus besoin." % debut)
+    rouvrir = re.sub(r"</?b>", "", plateforme.raccourci())
+    texte = "%s\n\nL'outil s'ouvre dans votre navigateur. Pour le rouvrir plus tard : %s." % (debut, rouvrir)
+    if plateforme.SYSTEME == "windows":
+        return texte + ("\n\nVous pouvez supprimer le fichier ZIP et le dossier téléchargés : l'outil n'en a "
+                        "plus besoin.")
+    adresse = adresse_interface(destination)
+    return texte + ("\nAdresse de l'outil : %s" % adresse if adresse else "")
 
 
 if __name__ == "__main__":

@@ -3,9 +3,9 @@
 :root{color-scheme:light;
 --fond:#E9EAEC;--surface:#FFFFFF;--texte:#121417;--doux:#545B65;--trait:#D8DBDF;
 --noir:#121417;--jaune:#FFC21A;--jaune-fonce:#F2AF00;--jaune-pale:#FFF5D1;--rouge:#C8281E;
---titre:"Bahnschrift","DIN Alternate","Arial Narrow",sans-serif;
---police:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
---mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace}
+--titre:"Bahnschrift","DIN Alternate","Roboto Condensed","Ubuntu Condensed","Arial Narrow",sans-serif;
+--police:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Ubuntu","Cantarell",Roboto,sans-serif;
+--mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,"SF Mono",Menlo,"DejaVu Sans Mono",monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.6 var(--police)}
 a{color:var(--texte);text-underline-offset:3px}

@@ -1,3 +1,4 @@
+from veille_ia import plateforme
 from veille_ia.installer import pages
 
 SITES = {"a": {"nom": "a.fr", "propriete": "sc-domain:a.fr"}, "b": {"nom": "b.fr", "propriete": "sc-domain:b.fr"}}
@@ -25,7 +26,7 @@ def test_mes_sites_dit_qu_on_peut_fermer_l_onglet_et_quand_l_analyse_tourne():
     html = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, actif_heure_fixe=True, heure_fixe="08:30"), "j")
     assert "Vous pouvez fermer cet onglet." in html
     assert "à chaque démarrage de l'ordinateur et chaque jour à 08:30" in html
-    assert "raccourci <b>Bifurq AIO</b> sur votre bureau" in html
+    assert "Pour revenir ici : %s." % plateforme.raccourci() in html
     arretee = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, active=False), "j")
     assert "aucune analyse ne se lance toute seule" in arretee and "même onglet fermé" not in arretee
 

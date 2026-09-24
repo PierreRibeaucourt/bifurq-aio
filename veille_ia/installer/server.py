@@ -12,7 +12,7 @@ dict en mémoire. Trois protections tout de même :
     l'utilisateur ;
   - la connexion Google vérifie le paramètre state renvoyé par Google.
 
-Une seule instance à la fois : relancer l'outil (raccourci du bureau) rouvre la page
+Une seule instance à la fois : relancer l'outil (raccourci, application) rouvre la page
 de l'instance déjà en route. Le serveur s'arrête seul après 45 minutes sans usage."""
 import http.server
 import io
@@ -30,7 +30,7 @@ import urllib.request
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import __version__, config, gsc_api, mise_a_jour, oauth, scheduler_windows, sitemap, watch
+from .. import __version__, config, gsc_api, mise_a_jour, oauth, plateforme, sitemap, watch
 from ..erreurs import expliquer
 from . import pages
 
@@ -334,7 +334,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         _effacer_temp()
         if premiere_fois:
             config.definir_planification(au_demarrage, actif_heure_fixe, heure_fixe)
-            scheduler_windows.installer(au_demarrage, actif_heure_fixe, heure_fixe)
+            plateforme.planifier(au_demarrage, actif_heure_fixe, heure_fixe)
         lancer_analyse()
         self._rediriger("/", 303)
 
@@ -414,7 +414,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             config.retirer_site(cle)
             watch.oublier_site(cle)
             if not config.lire()["sites"]:
-                scheduler_windows.desinstaller()
+                plateforme.retirer_planification()
         self._rediriger("/", 303)
 
     def _reglages(self, champs):
@@ -427,11 +427,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._repondre(pages.reglages(config.lire()["planification"], _session["jeton_formulaire"],
                                                  erreur=str(ex)))
         if config.lire()["sites"]:
-            scheduler_windows.installer(au_demarrage, actif_heure_fixe, heure_fixe)
+            plateforme.planifier(au_demarrage, actif_heure_fixe, heure_fixe)
         self._repondre(pages.reglages(planif, _session["jeton_formulaire"], message="Réglages enregistrés."))
 
     def _arreter(self, champs):
-        scheduler_windows.desinstaller()
+        plateforme.retirer_planification()
         config.desactiver_planification()
         self._rediriger("/reglages?arret=1", 303)
 

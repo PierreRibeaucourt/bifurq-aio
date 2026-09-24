@@ -128,14 +128,18 @@ def test_numero_illisible_jamais_telecharge(monkeypatch, tmp_path):
 
 
 def test_installateur_lance_avec_le_python_de_base(monkeypatch, tmp_path):
+    python = "pythonw.exe" if os.name == "nt" else "python3"
     (tmp_path / "pyvenv.cfg").write_text("home = %s\n" % tmp_path, encoding="utf-8")
-    (tmp_path / "pythonw.exe").write_bytes(b"")
+    (tmp_path / python).write_bytes(b"")
     monkeypatch.setattr(mise_a_jour.sys, "prefix", str(tmp_path))
     lances = []
-    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda commande, **options: lances.append(commande))
+    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda commande, **options: lances.append((commande, options)))
     mise_a_jour.lancer_installateur(str(tmp_path / "code"), 51234)
-    assert lances == [[str(tmp_path / "pythonw.exe"), os.path.join(str(tmp_path / "code"), "installer.pyw"),
-                       "--mise-a-jour", "51234"]]
+    commande, options = lances[0]
+    assert commande == [str(tmp_path / python), os.path.join(str(tmp_path / "code"), "installer.pyw"),
+                        "--mise-a-jour", "51234"]
+    # détaché : l'installateur arrête l'interface qui l'a lancé, et doit lui survivre
+    assert options.get("creationflags") if os.name == "nt" else options.get("start_new_session")
 
 
 def test_version_publiee_concorde_avec_le_code_et_le_bouton_de_telechargement():

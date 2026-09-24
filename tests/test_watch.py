@@ -126,9 +126,9 @@ def test_executer_interactif_ecrit_l_etat_sans_notifier(monkeypatch):
     _simuler(monkeypatch, {"https://exemple.fr/collections/complements-sommeil"}, [{"URL": ADRESSE, "Impressions": 40}])
     monkeypatch.setattr("veille_ia.http_check.ControleurHTTP.controler",
                         lambda self, url: {"code": 404 if url == ADRESSE else 200, "finale": url})
-    from veille_ia import notify_windows
+    from veille_ia import plateforme
     envois = []
-    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: envois.append(a) or True)
+    monkeypatch.setattr(plateforme, "notifier", lambda *a, **k: envois.append(a) or True)
     watch.executer(interactif=True)
     etat = watch.lire_etat()
     assert etat["exemple"]["statut"] == "a_corriger"
@@ -144,9 +144,9 @@ def test_executer_range_une_panne_en_probleme_avec_son_action(monkeypatch):
     def expire(chemin, propriete):
         raise ErreurConnexionGoogle("La connexion à votre compte Google a expiré.")
     monkeypatch.setattr(gsc_api, "dernier_jour", expire)
-    from veille_ia import notify_windows
+    from veille_ia import plateforme
     envois = []
-    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: envois.append(a) or True)
+    monkeypatch.setattr(plateforme, "notifier", lambda *a, **k: envois.append(a) or True)
     watch.executer()
     watch.executer()                         # même panne, même jour : une seule notification
     e = watch.lire_etat()["exemple"]
@@ -178,8 +178,8 @@ def test_resultat_d_un_site_visible_sans_attendre_la_fin_des_suivants(monkeypatc
         return {"site": cle, "fin_gsc": FIN, "a_rediriger": a_rediriger, "anomalies": [], "infos": [],
                 "resolues": []}
     monkeypatch.setattr(watch, "veille_site", veille_site)
-    from veille_ia import notify_windows
-    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: True)
+    from veille_ia import plateforme
+    monkeypatch.setattr(plateforme, "notifier", lambda *a, **k: True)
     watch.executer(interactif=True)
     assert etat_de_a_pendant_b["statut"] == "a_corriger"          # nouvelle analyse, pas l'ancien "ok"
     assert watch.lire_etat()["b"]["statut"] == "ok"
@@ -197,8 +197,8 @@ def test_sites_analyses_dans_l_ordre_de_mes_sites(monkeypatch):
         analyses.append(cle)
         return {"site": cle, "fin_gsc": FIN, "a_rediriger": [], "anomalies": [], "infos": [], "resolues": []}
     monkeypatch.setattr(watch, "veille_site", veille_site)
-    from veille_ia import notify_windows
-    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: True)
+    from veille_ia import plateforme
+    monkeypatch.setattr(plateforme, "notifier", lambda *a, **k: True)
     watch.executer(interactif=True)
     assert analyses == ["d", "b", "c", "a"]         # problème, incomplet, jamais analysé, tout va bien
     analyses.clear()
@@ -261,8 +261,8 @@ def test_analyse_d_un_seul_site_garde_les_autres(monkeypatch):
         return {"site": cle, "fin_gsc": FIN, "a_rediriger": [], "anomalies": ["incomplet"], "infos": [],
                 "resolues": []}
     monkeypatch.setattr(watch, "veille_site", veille_site)
-    from veille_ia import notify_windows
-    monkeypatch.setattr(notify_windows, "notifier", lambda *a, **k: True)
+    from veille_ia import plateforme
+    monkeypatch.setattr(plateforme, "notifier", lambda *a, **k: True)
     watch.executer(interactif=True, cles=["b"])
     assert analyses == ["b"]
     etat = watch.lire_etat()
