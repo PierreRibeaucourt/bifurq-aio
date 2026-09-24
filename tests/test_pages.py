@@ -68,3 +68,9 @@ def test_aucun_guillemet_francais_ni_tiret_cadratin():
     for html in ecrans:
         for interdit in ("«", "»", "‹", "›", "—", "–"):
             assert interdit not in html
+
+
+def test_auteur_en_bas_de_mes_sites():
+    html = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
+    assert html.rindex("carte-site") < html.index('class="auteur"')          # après les sites
+    assert 'href="https://www.linkedin.com/in/pierre-ribeaucourt/" target="_blank" rel="noopener"' in html

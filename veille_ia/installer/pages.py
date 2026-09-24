@@ -4,7 +4,7 @@ import html
 import json
 
 from ..report import SCRIPT_TABLEAU, entete_site, tableau_adresses
-from ..style import gabarit
+from ..style import bandeau_auteur, gabarit
 
 e = html.escape
 
@@ -153,8 +153,8 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton):
               if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
     corps = """<div class="entete"><div><h1>Vos sites</h1></div>
 <div class="actions"><form class="enligne" method="post" action="/analyser">%s%s</form>
-<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s""" % (
-        _jeton(jeton), bouton, _consigne(planif), chantier, "".join(lignes))
+<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s""" % (
+        _jeton(jeton), bouton, _consigne(planif), chantier, "".join(lignes), bandeau_auteur())
     return gabarit("Vos sites", corps, rafraichir=3 if en_cours else None, onglet="sites")
 
 

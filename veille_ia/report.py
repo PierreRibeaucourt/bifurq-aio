@@ -9,7 +9,7 @@ import os
 import re
 import urllib.parse
 
-from .style import gabarit
+from .style import bandeau_auteur, gabarit
 
 e = html.escape
 
@@ -235,9 +235,9 @@ def rendre(etat, sites, maintenant):
     heure = datetime.datetime.fromisoformat(maintenant).strftime("%H:%M")
     corps = ("<div class=\"entete\"><div><h1>Rapport du %s</h1>"
              "<p class=\"sous\">Analyse terminée à %s. Pour ignorer une adresse ou modifier un site, ouvrez l'outil "
-             "avec le raccourci <b>Veille des adresses inventées</b> de votre bureau.</p></div></div>%s"
+             "avec le raccourci <b>Veille des adresses inventées</b> de votre bureau.</p></div></div>%s%s"
              "<p class=\"pied\">Rapports précédents : dossier <code>config\\rapports</code> de l'outil.</p>"
-             % (date_longue(maintenant), heure, "".join(blocs)))
+             % (date_longue(maintenant), heure, "".join(blocs), bandeau_auteur()))
     return gabarit("Rapport du %s" % date_longue(maintenant), corps, navigation=False, script=SCRIPT_TABLEAU)
 
 

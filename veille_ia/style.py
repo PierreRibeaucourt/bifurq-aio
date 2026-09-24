@@ -290,7 +290,35 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
   .barre-fixe{padding:12px 14px}
   .barre-action{width:100%;flex-wrap:wrap}.barre-action .bouton{flex:1 1 auto}
 }
+
+/* auteur : bandeau noir à bande de chantier, en bas de Mes sites et du rapport */
+.auteur{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px 22px;
+  align-items:center;margin-top:40px;padding:28px 24px 22px;background:var(--noir);color:#fff;border-radius:4px;
+  overflow:hidden}
+.auteur::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;
+  background:repeating-linear-gradient(-45deg,var(--jaune) 0 12px,var(--noir) 12px 24px)}
+.avatar{width:64px;height:64px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  background:var(--jaune);color:var(--noir);font:700 28px/1 var(--titre);font-stretch:87.5%;
+  box-shadow:inset 0 0 0 4px var(--jaune),inset 0 0 0 6px var(--noir)}
+.auteur p{margin:0}
+.auteur .auteur-sur{font:700 12px/1 var(--titre);font-stretch:87.5%;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--jaune)}
+.auteur .auteur-nom{margin-top:5px;font:700 24px/1.1 var(--titre);font-stretch:87.5%}
+.auteur .auteur-texte{margin-top:6px;font-size:14px;color:#D5D8DC;max-width:62ch}
+@media (max-width:640px){.auteur{grid-template-columns:auto minmax(0,1fr)}.auteur .bouton{grid-column:1/-1}}
 """
+
+LINKEDIN = "https://www.linkedin.com/in/pierre-ribeaucourt/"
+
+
+def bandeau_auteur():
+    """L'auteur de l'outil, en bas de Mes sites et du rapport ouvert par les notifications."""
+    return ('<aside class="auteur" aria-label="Auteur de l\'outil"><div class="avatar" aria-hidden="true">PR</div>'
+            '<div><p class="auteur-sur">Un outil gratuit créé par</p><p class="auteur-nom">Pierre Ribeaucourt</p>'
+            '<p class="auteur-texte">Cet outil vous rend service ? Dites-le-moi sur LinkedIn, avec une idée '
+            'd\'amélioration ou un retour.</p></div>'
+            '<a class="bouton" href="%s" target="_blank" rel="noopener">Me retrouver sur LinkedIn</a></aside>'
+            % LINKEDIN)
 
 
 def logo(taille=28):
