@@ -125,3 +125,8 @@ def test_ecrire_purge_au_dela_de_l_historique(tmp_path):
     for i in range(5):
         report.ecrire(str(tmp_path), "<html></html>", "2026-09-%02d" % (i + 1), garder_historique=2)
     assert len(os.listdir(os.path.join(str(tmp_path), "rapports"))) == 2
+
+
+def test_rapport_presente_l_auteur():
+    html = report.rendre({}, SITES, "2026-09-24T10:31")
+    assert "Pierre Ribeaucourt" in html and "linkedin.com/in/pierre-ribeaucourt" in html
