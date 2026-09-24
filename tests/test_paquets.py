@@ -108,3 +108,10 @@ def test_installateur_lance_par_un_double_clic_parle_dans_une_fenetre(monkeypatc
     monkeypatch.setattr(installeur.sys, "argv", ["installer.pyw", "--terminal"])
     installeur.message("Bifurq AIO est installé.")
     assert len(fenetres) == 1                        # installer.sh : le Terminal suffit
+
+
+def test_le_site_telecharge_les_paquets_publies():
+    with io.open(os.path.join(RACINE, "docs", "index.html"), encoding="utf-8") as f:
+        page = f.read()
+    for nom in (paquets.ZIP_MAC, paquets.DEB, paquets.RPM):
+        assert 'href="https://github.com/PierreRibeaucourt/bifurq-aio/releases/latest/download/%s"' % nom in page

@@ -1,4 +1,4 @@
 {
-  "version": "0.5.0",
-  "nouveautes": "Bifurq AIO s'installe aussi sur Mac et Linux, avec une ligne à coller dans le Terminal. Sous Windows, l'outil fonctionne comme avant."
+  "version": "0.5.1",
+  "nouveautes": "Sur Mac et sous Linux, l'outil s'installe aussi par un double-clic : application pour Mac, paquets .deb et .rpm pour Linux."
 }

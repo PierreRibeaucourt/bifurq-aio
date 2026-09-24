@@ -35,6 +35,10 @@ nécessaire, en discuter dans une issue d'abord.
   double-clic. Sur macOS et Linux, `docs/installer.sh` le télécharge et le lance (la ligne
   `curl ... | sh` du site). Pour développer, lancer plutôt l'interface depuis le dépôt :
   `python -m veille_ia.installer.server` (configuration dans `config/` du dépôt, non versionnée).
+- `outils/paquets.py` : installation par double-clic sur macOS (application Installer Bifurq AIO,
+  sans signature Apple) et Linux (paquets .deb et .rpm). GitHub Actions les construit et les joint
+  à la publication de chaque étiquette de version (`.github/workflows/publication.yml`) ; le site
+  les télécharge sous `releases/latest/download/`.
 - `icone.ico`, `icone.icns`, `icone.png` : icône du raccourci (Windows, macOS, Linux), même
   panneau de déviation que le logo (`veille_ia/style.py`).
 

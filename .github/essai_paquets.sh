@@ -1,6 +1,6 @@
 #!/bin/sh
 # Paquets d'installation par double-clic (outils/paquets.py), essayés comme un utilisateur :
-# - Linux : .deb installé par apt (ce que fait la logithèque), puis « Bifurq AIO » ouvert
+# - Linux : .deb installé par apt (ce que fait la logithèque), puis Bifurq AIO ouvert
 #   depuis le menu ; .rpm installé par dnf dans un conteneur Fedora ;
 # - macOS : application téléchargée (marque de quarantaine), autorisée puis ouverte.
 # Chaque vérification ratée devient une annotation ::error:: de GitHub Actions.

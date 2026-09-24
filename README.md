@@ -49,28 +49,38 @@ votre dossier personnel :
 
 1. Si Python n'est pas encore installé sur votre Mac : téléchargez-le sur
    [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
-2. Ouvrez le Terminal (tapez Terminal dans Spotlight avec Cmd + Espace), collez cette ligne et
-   appuyez sur Entrée :
-
-   ```
-   curl -fsSL https://pierreribeaucourt.github.io/bifurq-aio/installer.sh | sh
-   ```
-3. L'outil s'ouvre dans votre navigateur.
+2. Téléchargez [Bifurq-AIO-Mac.zip](https://github.com/PierreRibeaucourt/bifurq-aio/releases/latest/download/Bifurq-AIO-Mac.zip) et double-cliquez sur
+   **Installer Bifurq AIO**.
+3. Au premier lancement seulement, macOS bloque l'application, qui n'est pas signée par Apple.
+   Ouvrez **Réglages Système** puis **Confidentialité et sécurité** et cliquez sur
+   **Ouvrir quand même**. Double-cliquez à nouveau sur **Installer Bifurq AIO** et confirmez avec
+   **Ouvrir**. Sur macOS 14 ou plus ancien : clic droit sur l'application, puis **Ouvrir**.
+4. L'outil s'ouvre dans votre navigateur. Vous pouvez supprimer l'application Installer Bifurq AIO
+   et le fichier ZIP téléchargés.
 
 ### Linux
 
-Ouvrez un terminal, collez cette ligne et appuyez sur Entrée :
+1. Téléchargez le paquet de votre distribution : [bifurq-aio.deb](https://github.com/PierreRibeaucourt/bifurq-aio/releases/latest/download/bifurq-aio.deb)
+   (Ubuntu, Debian, Mint) ou [bifurq-aio.rpm](https://github.com/PierreRibeaucourt/bifurq-aio/releases/latest/download/bifurq-aio.rpm) (Fedora, openSUSE).
+2. Double-cliquez dessus. Votre logithèque s'ouvre : cliquez sur **Installer** et saisissez votre
+   mot de passe.
+3. Ouvrez **Bifurq AIO** depuis le menu des applications. La première ouverture installe l'outil
+   dans votre dossier personnel.
+
+Les analyses automatiques passent par systemd, ou par cron sur un système sans systemd. Les
+notifications passent par `notify-send`.
+
+### Avec une ligne dans le Terminal (macOS et Linux)
+
+Sans téléchargement ni autorisation : ouvrez le Terminal, collez cette ligne et appuyez sur
+Entrée.
 
 ```
 curl -fsSL https://pierreribeaucourt.github.io/bifurq-aio/installer.sh | sh
 ```
 
-Python 3 est présent d'office sur la plupart des distributions. Les analyses automatiques passent
-par systemd, ou par cron sur un système sans systemd. Les notifications passent par
-`notify-send`.
-
-La ligne d'installation télécharge la dernière version publiée puis lance son installateur
-(`installer.pyw`). Elle se relit dans [docs/installer.sh](docs/installer.sh).
+Elle télécharge la dernière version publiée puis lance son installateur (`installer.pyw`). Elle se
+relit dans [docs/installer.sh](docs/installer.sh).
 
 **Mettre à jour** : un bandeau annonce chaque nouvelle version en haut de **Vos sites**. Cliquez
 sur **Mettre à jour** : l'outil télécharge et installe la nouvelle version, puis la page se

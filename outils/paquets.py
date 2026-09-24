@@ -4,11 +4,11 @@ Actions pour chaque version et joints à sa publication (Release) :
 
   python3 outils/paquets.py dist
 
-- Bifurq-AIO-Mac.zip : l'application « Installer Bifurq AIO ». Elle lance installer.pyw,
+- Bifurq-AIO-Mac.zip : l'application Installer Bifurq AIO. Elle lance installer.pyw,
   qu'elle contient, avec le Python du Mac. Sans signature Apple : au premier lancement,
   macOS demande une autorisation (Réglages Système > Confidentialité et sécurité).
 - bifurq-aio.deb (Ubuntu, Debian, Mint) et bifurq-aio.rpm (Fedora, openSUSE) : l'outil
-  dans /opt/bifurq-aio et « Bifurq AIO » dans le menu des applications. À la première
+  dans /opt/bifurq-aio et Bifurq AIO dans le menu des applications. À la première
   ouverture, cette entrée installe l'outil dans le dossier de l'utilisateur, comme
   installer.pyw sous Windows ; ensuite, elle ouvre son interface. Un double-clic sur le
   paquet l'ouvre dans la logithèque de la distribution.
@@ -41,6 +41,8 @@ DESCRIPTION = "Veille des adresses inventées par l'IA de Google"
 SITE = "https://pierreribeaucourt.github.io/bifurq-aio/"
 MAINTENEUR = "Pierre Ribeaucourt <208388986+PierreRibeaucourt@users.noreply.github.com>"
 APPLICATION_MAC = "Installer Bifurq AIO.app"
+# noms des fichiers publiés : le site les télécharge sous releases/latest/download/
+ZIP_MAC, DEB, RPM = "Bifurq-AIO-Mac.zip", "bifurq-aio.deb", "bifurq-aio.rpm"
 
 
 def version():
@@ -133,7 +135,7 @@ def zip_mac(sortie):
 
 # --- Linux : arborescence commune au .deb et au .rpm ---------------------------------------------
 LANCEUR_LINUX = r"""#!/bin/sh
-# « Bifurq AIO » du menu des applications, installé par le paquet .deb ou .rpm.
+# Bifurq AIO dans le menu des applications, installé par le paquet .deb ou .rpm.
 # Première ouverture, ou paquet plus récent que l'outil de l'utilisateur : installer.pyw
 # copie l'outil dans le dossier de l'utilisateur et l'ouvre. Ensuite : son interface.
 PAQUET=/opt/bifurq-aio
@@ -309,8 +311,7 @@ def rpm(sortie):
 
 def construire(dossier):
     os.makedirs(dossier, exist_ok=True)
-    faits = [zip_mac(os.path.join(dossier, "Bifurq-AIO-Mac.zip")), deb(os.path.join(dossier, "bifurq-aio.deb")),
-             rpm(os.path.join(dossier, "bifurq-aio.rpm"))]
+    faits = [zip_mac(os.path.join(dossier, ZIP_MAC)), deb(os.path.join(dossier, DEB)), rpm(os.path.join(dossier, RPM))]
     return [f for f in faits if f]
 
 
