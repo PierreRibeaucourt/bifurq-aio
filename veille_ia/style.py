@@ -217,10 +217,27 @@ fieldset.quand legend{padding:0;margin-bottom:8px;font:700 13px/1 var(--titre);f
 .quand-choix{display:flex;flex-wrap:wrap;gap:8px}
 .quand-choix label.choix{margin-top:0;padding:8px 12px;gap:10px}
 .quand-choix .meta{display:none}
-.barre-bas{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
-.barre-fixe details.avance{margin-top:0;flex:1 1 240px}
-.barre-fixe details.avance>summary{padding:12px 14px}
-.barre-fixe .avance-contenu{max-height:38vh;overflow:auto}
+.barre-bas{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.ouvrir-reglages{display:grid;grid-template-columns:auto auto;align-items:center;gap:1px 9px;padding:6px 8px 6px 4px;
+  border:0;border-radius:3px;background:none;font:inherit;color:var(--texte);text-align:left;cursor:pointer}
+.ouvrir-reglages svg{grid-row:1/3}
+.ouvrir-titre{font-weight:600;text-decoration:underline;text-decoration-color:var(--trait-fort);text-underline-offset:3px}
+.ouvrir-reglages:hover .ouvrir-titre{text-decoration-color:var(--jaune-fonce);text-decoration-thickness:2px}
+.resume-reglages{font-size:13px;color:var(--doux)}
+
+/* fenêtre des réglages avancés */
+dialog.dialogue{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 48px);padding:0;border:0;border-radius:6px;
+  background:var(--surface);color:var(--texte);box-shadow:0 30px 80px -20px rgba(18,20,23,.6);overflow:auto}
+dialog.dialogue::backdrop{background:rgba(18,20,23,.55)}
+.dialogue-tete{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 12px 24px;
+  background:var(--noir);color:#fff;border-bottom:5px solid var(--jaune)}
+.dialogue-fermer{width:36px;height:36px;border:0;border-radius:3px;background:none;color:#fff;font-size:26px;
+  line-height:1;cursor:pointer}
+.dialogue-fermer:hover{background:rgba(255,255,255,.12)}
+.dialogue-corps{padding:20px 24px 6px}
+.dialogue-corps>p.doux{margin:0 0 20px;font-size:14px}
+.dialogue-corps .champ:first-of-type{margin-top:0}
+.dialogue-pied{display:flex;justify-content:flex-end;padding:18px 24px 22px}
 .barre-action{display:flex;align-items:center;gap:14px;margin-left:auto}
 .compteur{font-size:14px;color:var(--doux);white-space:nowrap}
 

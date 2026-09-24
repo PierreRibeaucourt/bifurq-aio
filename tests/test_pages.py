@@ -28,6 +28,9 @@ def test_bouton_et_reglages_dans_la_barre_fixe_sous_la_liste():
     barre = html[html.index('class="barre-fixe"'):]
     assert "Lancer la surveillance" in barre and 'name="au_demarrage"' in barre and "Réglages avancés" in barre
     assert html.index('value="sc-domain:c.fr"') < html.index('class="barre-fixe"')
+    fenetre = html[html.index('<dialog id="reglages"'):html.index("</dialog>")]    # réglages dans une fenêtre
+    assert 'name="seuil"' in fenetre and 'name="dataforseo_login"' in fenetre
+    assert "</form>" not in fenetre and html.index("</dialog>") < html.index("</form>")    # envoyés avec le reste
 
 
 def test_champ_de_recherche_seulement_pour_une_longue_liste_et_hors_du_formulaire():
