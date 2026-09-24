@@ -1,0 +1,28 @@
+name: Publication
+
+# Une étiquette de version (v0.5.1...) publie ses paquets d'installation par double-clic :
+# application macOS, paquets .deb et .rpm. Le site pointe sur releases/latest/download/.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  paquets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construction
+        run: |
+          sudo apt-get install -y -qq rpm >/dev/null
+          python3 outils/paquets.py dist
+          dpkg-deb --info dist/bifurq-aio.deb
+          rpm -qpi dist/bifurq-aio.rpm
+      - name: Publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES=$(python3 -c "import json; print(json.load(open('docs/version.json', encoding='utf-8'))['nouveautes'])")
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Bifurq AIO ${GITHUB_REF_NAME#v}" --notes "$NOTES"
