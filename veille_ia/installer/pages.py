@@ -202,23 +202,39 @@ votre site, ou ajoutez d'abord ce compte comme utilisateur dans la Search Consol
     # propriétés Search Console, ils restent à portée sans faire défiler toute la liste.
     corps = """<div class="etroit"><h1>Quel site voulez-vous surveiller ?</h1>
 <p class="sous">Voici les sites auxquels ce compte Google a accès dans la Search Console.</p>%s%s
-<form class="choisir" method="post" action="/activer">%s
+<form class="choisir" method="post" action="/activer" novalidate>%s
 <div>%s</div>
 <div class="barre-fixe">%s
-<div class="barre-bas">%s
+<div class="barre-bas">
+<button type="button" class="ouvrir-reglages" aria-haspopup="dialog">%s<span class="ouvrir-titre">Réglages avancés</span>
+<span class="resume-reglages">Alerte dès 15 vues · sans DataForSEO</span></button>
 <div class="barre-action"><span class="compteur" aria-live="polite"></span>
 <button class="bouton grand" type="submit">Lancer la surveillance</button></div></div>
 </div>
-</form></div>""" % (bloc_erreur, recherche, _jeton(jeton), "".join(cases), quand,
-                    _reglages_avances(_champ_seuil(15) + _champs_dataforseo()))
+<dialog id="reglages" class="dialogue" aria-labelledby="reglages-titre">
+<div class="dialogue-tete"><h2 id="reglages-titre">Réglages avancés</h2>
+<button type="button" class="dialogue-fermer" data-fermer aria-label="Fermer">×</button></div>
+<div class="dialogue-corps"><p class="doux">Ils s'appliquent aux sites cochés. Vous pourrez les changer ensuite site par
+site, avec le bouton Modifier.</p>%s</div>
+<div class="dialogue-pied"><button type="button" class="bouton" data-fermer>Valider</button></div>
+</dialog>
+</form></div>""" % (bloc_erreur, recherche, _jeton(jeton), "".join(cases), quand, ICONE_REGLAGES,
+                    _champ_seuil(15) + _champs_dataforseo())
     return gabarit("Choisir un site", corps, onglet="sites", script=SCRIPT_CHOISIR)
 
 
 SEUIL_RECHERCHE = 6      # au-delà, un champ filtre la liste des propriétés
 
+ICONE_REGLAGES = ('<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" '
+                  'stroke-width="1.8" stroke-linecap="round"><path d="M2 4.5h14M2 9h14M2 13.5h14"/>'
+                  '<circle cx="6" cy="4.5" r="2" fill="#FFC21A"/><circle cx="12" cy="9" r="2" fill="#FFC21A"/>'
+                  '<circle cx="7.5" cy="13.5" r="2" fill="#FFC21A"/></svg>')
+
 # Filtre la liste à la volée (sans accents ni majuscules ; Échap vide le champ), compte les
-# sites cochés, masqués compris, et empêche un second envoi pendant l'activation (qui lit
-# le plan de site de chaque site choisi) : un double clic renverrait vers la connexion Google.
+# sites cochés, masqués compris, ouvre les réglages avancés dans une fenêtre (Entrée dans un
+# champ la referme au lieu de lancer la surveillance) et en résume les valeurs dans la barre,
+# et empêche un second envoi pendant l'activation (qui lit le plan de site de chaque site
+# choisi) : un double clic renverrait vers la connexion Google.
 SCRIPT_CHOISIR = r"""(function(){
 var f=document.querySelector('form.choisir');if(!f)return;
 var n=f.querySelector('.compteur'),b=f.querySelector('.barre-action button');
@@ -234,6 +250,16 @@ vide.hidden=vus>0;}
 q.addEventListener('input',filtrer);
 q.addEventListener('keydown',function(ev){if(ev.key==='Escape'){q.value='';filtrer();}});
 filtrer();}
+var d=document.getElementById('reglages'),resume=f.querySelector('.resume-reglages');
+function resumer(){var s=parseInt(f.querySelector('input[name=seuil]').value,10)||15,
+l=f.querySelector('input[name=dataforseo_login]').value.trim();
+resume.textContent='Alerte dès '+s+' vue'+(s>1?'s':'')+' · '+(l?'avec DataForSEO':'sans DataForSEO');}
+if(d&&d.showModal){
+f.querySelector('.ouvrir-reglages').addEventListener('click',function(){d.showModal();});
+[].forEach.call(d.querySelectorAll('[data-fermer]'),function(x){x.addEventListener('click',function(){d.close();});});
+d.addEventListener('click',function(ev){if(ev.target===d)d.close();});
+d.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ev.target.tagName==='INPUT'){ev.preventDefault();d.close();}});
+d.addEventListener('close',resumer);}
 f.addEventListener('submit',function(ev){
 if(f.getAttribute('data-envoye')){ev.preventDefault();return;}
 f.setAttribute('data-envoye','1');b.disabled=true;
