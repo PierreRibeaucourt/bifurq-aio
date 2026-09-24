@@ -317,6 +317,7 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 """
 
 LINKEDIN = "https://www.linkedin.com/in/pierre-ribeaucourt/"
+FONCTIONNEMENT = "https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html"
 
 
 def bandeau_auteur():

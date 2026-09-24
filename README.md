@@ -11,14 +11,19 @@ en erreur et vous indique vers quelle page les rediriger. Il vous prévient par 
 Windows.
 
 **Ce qu'il fait à chaque analyse :**
-1. il cherche les adresses de votre site vues dans Google ces 3 derniers mois qui répondent en
-   erreur 404 et que Google n'a jamais explorées, donc qui n'ont jamais existé ;
+1. il cherche les adresses de votre site vues dans Google ces 7 derniers jours (et au moins 15
+   fois en 3 mois), absentes du plan de site, que Google n'a jamais explorées, donc qui n'ont
+   jamais existé, et qui répondent en erreur 404 ou 410 ;
 2. il cherche, parmi les pages réelles de votre site, celle qui ressemble le plus à chaque
    adresse inventée ;
 3. s'il en trouve une assez proche, il la propose comme destination de la redirection. Sinon, il
    vous signale l'adresse et vous choisissez la destination.
 
 L'outil ne modifie rien sur votre site. Vous posez vous-même les redirections.
+
+**Ce qu'il ne signale pas** : les pages supprimées sans redirection. Google les connaissait, et la
+Search Console les liste déjà (rapport **Pages**, motif « Introuvable (404) »). Le détail, et la
+façon dont l'outil vérifie chaque adresse : [comment fonctionne l'outil](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html).
 
 ## Installation
 
@@ -98,9 +103,10 @@ Windows et supprimez la tâche **Bifurq AIO**.
   Console du site. Ajoutez-le comme utilisateur sur
   [search.google.com/search-console](https://search.google.com/search-console), puis
   reconnectez-vous.
-- **Une adresse est signalée alors que la page s'affiche** : le pare-feu de votre site peut
-  bloquer la vérification faite depuis votre ordinateur (code 403 ou 503). Renseignez des
-  identifiants DataForSEO dans **Modifier**, rubrique **Réglages avancés**.
+- **« Votre site bloque l'outil » s'affiche sous un site** : une protection anti-robots
+  (Cloudflare, DataDome, Akamai...) répond à la place de votre site, et l'outil ne peut pas
+  tester ses adresses. Autorisez l'adresse IP de votre ordinateur dans cette protection : voir
+  [si votre site est protégé contre les robots](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html#site-protege).
 - **L'outil ne répond plus dans le navigateur** : il s'arrête seul après 45 minutes sans usage.
   Rouvrez-le avec le raccourci du bureau.
 

@@ -73,8 +73,11 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 
 .texte h2{margin:40px 0 10px}
 .texte h3{margin:24px 0 6px}
-.texte p,.texte ul{margin:0 0 12px}
+.texte p,.texte ul,.texte ol{margin:0 0 12px}
 .texte li{margin-bottom:6px}
+.texte ol.etapes.une-colonne{grid-template-columns:1fr;margin:0 0 16px}
+.texte ol.etapes.une-colonne li{margin:0}
+.texte .encadre p{margin:0}
 
 .signature{margin:12px 0 0;font:600 16px/1.3 var(--police);color:var(--doux)}
 .signature a{color:var(--texte);text-decoration-color:var(--jaune-fonce);text-decoration-thickness:3px}

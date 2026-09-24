@@ -130,3 +130,18 @@ def test_ecrire_purge_au_dela_de_l_historique(tmp_path):
 def test_rapport_presente_l_auteur():
     html = report.rendre({}, SITES, "2026-09-24T10:31")
     assert "Pierre Ribeaucourt" in html and "linkedin.com/in/pierre-ribeaucourt" in html
+
+
+def test_lien_d_aide_sous_le_message_de_protection_seulement():
+    html = report.resume({"statut": "incomplet", "protection": "Cloudflare",
+                          "anomalies": ["Votre site bloque l'outil (protection anti-robots Cloudflare) : ...",
+                                        "Google n'a pas pu vérifier 2 adresses aujourd'hui."]})
+    assert html.count("fonctionnement.html#site-protege") == 1
+    assert html.index("Cloudflare) : ...") < html.index("#site-protege") < html.index("Google n&#x27;a pas pu")
+    assert "#site-protege" not in report.resume({"statut": "incomplet", "anomalies": ["Autre chose."]})
+
+
+def test_analyse_incomplete_ne_dit_pas_que_tout_est_verifie():
+    html = report.resume({"statut": "incomplet", "anomalies": ["2 adresses n'ont pas pu être testées."]})
+    assert "Aucune adresse inventée confirmée pour l'instant." in html
+    assert "à corriger" not in html

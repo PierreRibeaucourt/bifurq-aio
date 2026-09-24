@@ -5,7 +5,7 @@
 Le process, pour chaque site :
   1. repérer les adresses qui ont des impressions récentes dans la Search Console,
      absentes du plan de site, que Google n'a jamais explorées (donc inventées), et
-     qui répondent en erreur 404 ;
+     qui répondent en erreur (404 ou 410) ;
   2. chercher, parmi les pages du plan de site, celle qui leur ressemble ;
   3. si une page ressemble assez, la proposer en redirection ; sinon, prévenir
      seulement.
@@ -32,11 +32,11 @@ import traceback
 
 from . import config, gsc_api, matching, report, sitemap, urls
 from .erreurs import ErreurDonnees, ErreurPlanDeSite, expliquer
-from .http_check import ControleurHTTP
+from .http_check import ERREURS, ControleurHTTP, corrigee
 
 FENETRE_JOURS = 90                 # cumul des impressions : les 3 derniers mois publiés
 MAX_INSPECTIONS = 300              # par site et par jour ; quota Google : 2 000
-RECONTROLE_NON_404 = 7             # jours
+RECONTROLE_CORRIGEES = 7           # jours entre deux tests d'une adresse déjà corrigée
 DUREE_MAX = 90 * 60                # au-delà, les sites restants sont reportés
 VERROU_MAX = 3 * 3600              # un verrou plus vieux est celui d'une analyse morte
 MIN_PAGES_REFERENCE = 20           # en dessous, pas de détection de chute brutale
@@ -196,7 +196,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     anomalies, infos = [], []
     r = {"site": cle, "nom": cfg["nom"], "seuil": cfg["seuil_impressions"], "fin_gsc": None,
          "a_rediriger": [], "non_controlees": [], "anomalies": anomalies, "infos": infos,
-         "resolues": [], "compte": {}}
+         "resolues": [], "compte": {}, "protection": None}
 
     etape("Lecture de la Search Console")
     fin = gsc_api.dernier_jour(chemin_jeton, cfg["propriete"])
@@ -289,18 +289,21 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                 if p not in ecartes and sum(cumul[u] for u in variantes[p]) >= cfg["seuil_impressions"]}
     sous_seuil = len([p for p in inventes if p not in ecartes and p not in suspects])
 
-    # contrôle HTTP : les 404 chaque jour, les autres tous les RECONTROLE_NON_404 jours
+    # contrôle HTTP : une adresse en erreur une fois par jour, une adresse corrigée tous les
+    # RECONTROLE_CORRIGEES jours, une réponse bloquée ou en panne à chaque analyse (une fois la
+    # protection du site réglée, Analyser maintenant doit le montrer tout de suite)
     if suspects:
         etape("Test de %d adresse%s sur votre site" % (len(suspects), "s" if len(suspects) > 1 else ""))
     CH = os.path.join(D, "codes_http.jsonl")
     http = _lire_jsonl(CH)
-    limite = (datetime.date.today() - datetime.timedelta(days=RECONTROLE_NON_404)).isoformat()
+    limite = (datetime.date.today() - datetime.timedelta(days=RECONTROLE_CORRIGEES)).isoformat()
     non_controlees, resolues = [], set()
     with io.open(CH, "a", encoding="utf-8") as f:
         for p, us in suspects.items():
             for u in us:
                 h = http.get(u) or {}
-                frais = h.get("veille") == aujourd_hui or (h.get("code") and h.get("code") != 404 and (h.get("veille") or "") >= limite)
+                code, veille = h.get("code"), h.get("veille") or ""
+                frais = (code in ERREURS and veille == aujourd_hui) or (corrigee(code) and veille >= limite)
                 if not frais:
                     h = dict(controleur_http.controler(u), url=u, veille=aujourd_hui)
                     f.write(json.dumps(h, ensure_ascii=False) + "\n")
@@ -308,20 +311,29 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                     http[u] = h
             codes = [(http.get(u) or {}).get("code") for u in us]
             erreurs = [(http.get(u) or {}).get("erreur", "") for u in us]
-            if 404 in codes:
+            protections = [(http.get(u) or {}).get("protection") for u in us]
+            if any(c in ERREURS for c in codes):
                 continue
-            if all(isinstance(c, int) and (200 <= c < 400) for c in codes):
+            if all(corrigee(c) for c in codes):
                 resolues.add(p)
             elif any("Domain Not Found" in e for e in erreurs):
                 resolues.add(p)                  # sous-domaine inexistant : aucune redirection possible
             else:
-                non_controlees.append({"chemin": p, "codes": codes, "erreur": next((e for e in erreurs if e), "")})
+                non_controlees.append({"chemin": p, "codes": codes, "erreur": next((e for e in erreurs if e), ""),
+                                       "protection": next((x for x in protections if x), None)})
     _compacter(CH, http)
-    if non_controlees:
+    bloquees = [x for x in non_controlees if x["protection"]]
+    if bloquees:
+        n, r["protection"] = len(bloquees), bloquees[0]["protection"]
+        anomalies.append("Votre site bloque l'outil (protection anti-robots %s) : %d adresse%s n'%s pas pu "
+                         "être testée%s. Pour le laisser passer, ajoutez l'adresse IP de cet ordinateur en "
+                         "exception dans %s." % (r["protection"], n, "s" if n > 1 else "", "ont" if n > 1 else "a",
+                                                 "s" if n > 1 else "", r["protection"]))
+    n = len(non_controlees) - len(bloquees)
+    if n:
         anomalies.append("%d adresse%s n'%s pas pu être testée%s sur votre site (réponse bloquée ou "
                          "erreur du serveur) : nouvel essai à la prochaine analyse."
-                         % (len(non_controlees), "s" if len(non_controlees) > 1 else "",
-                            "ont" if len(non_controlees) > 1 else "a", "s" if len(non_controlees) > 1 else ""))
+                         % (n, "s" if n > 1 else "", "ont" if n > 1 else "a", "s" if n > 1 else ""))
 
     # recherche d'une page similaire : proposée seulement si elle ressemble assez
     a_rediriger = []
@@ -331,7 +343,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     for p, us in suspects.items():
         if p in exclues:
             continue
-        exemple = next((u for u in us if (http.get(u) or {}).get("code") == 404), None)
+        exemple = next((u for u in us if (http.get(u) or {}).get("code") in ERREURS), None)
         if exemple is None:
             continue
         sec = urls.chemin(exemple).rsplit("/", 1)[0]
@@ -367,7 +379,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
 # --- tous les sites ----------------------------------------------------------------------------
 def _nouvelles_du_site(r):
     """(fichier des adresses déjà signalées, adresses déjà signalées, nouvelles adresses) :
-    nouvelle = jamais signalée, ou signalée puis résolue et de nouveau en 404."""
+    nouvelle = jamais signalée, ou signalée puis résolue et de nouveau en erreur."""
     p = os.path.join(config.dossier_site(r["site"]), "veille_deja_alertees.json")
     deja = {urls.cle_chemin(x) for x in _lire_json(p, [])}
     deja -= set(r["resolues"])
@@ -378,7 +390,7 @@ def _etat_du_site(r, nouvelles, ancien, maintenant):
     statut = "a_corriger" if r["a_rediriger"] else ("incomplet" if r["anomalies"] else "ok")
     return {"date": maintenant, "statut": statut, "fin_gsc": r["fin_gsc"],
             "a_rediriger": r["a_rediriger"], "anomalies": r["anomalies"], "infos": r["infos"],
-            "nouvelles": sorted(nouvelles), "probleme_notifie": ancien.get("probleme_notifie")}
+            "protection": r.get("protection"), "nouvelles": sorted(nouvelles), "probleme_notifie": ancien.get("probleme_notifie")}
 
 
 def _publier_etat_du_site(cle, entree):

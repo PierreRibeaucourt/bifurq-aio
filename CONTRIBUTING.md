@@ -15,7 +15,8 @@ nécessaire, en discuter dans une issue d'abord.
 - `veille_ia/oauth.py`, `oauth_client.py`, `gsc_api.py` : connexion Google et appels à l'API
   Search Console, avec le jeton de l'utilisateur final.
 - `veille_ia/http_check.py` : contrôle HTTP d'une adresse (direct, ou DataForSEO si
-  l'utilisateur fournit ses identifiants).
+  l'utilisateur fournit ses identifiants), et reconnaissance des protections anti-robots
+  (Cloudflare, DataDome...) qui répondent à la place du site.
 - `veille_ia/watch.py` : orchestrateur, un passage de veille pour tous les sites configurés.
 - `veille_ia/config.py` : lecture/écriture de `config/sites.json`.
 - `veille_ia/installer/` : serveur web local (installation, gestion), zéro dépendance.
