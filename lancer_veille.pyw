@@ -26,7 +26,7 @@ except BaseException:
     traceback.print_exc()
     try:
         from veille_ia import notify_windows
-        notify_windows.notifier("Veille adresses inventées : plantage",
+        notify_windows.notifier("Bifurq AIO : plantage",
                                 "Le script s'est arrêté avant la fin. Voir config\\sortie.log.")
     except Exception:
         pass

@@ -8,7 +8,7 @@ import sys
 
 from . import config
 
-NOM = "Veille des adresses inventées"
+NOM = "Bifurq AIO"
 
 
 def _ps(texte):
@@ -26,7 +26,7 @@ def creer_raccourci(dossier=None):
               "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($p);"
               "$s.TargetPath=%s;$s.Arguments='-m veille_ia.installer.server';$s.WorkingDirectory=%s;"
               "$s.Description=%s;%s$s.Save();$p"
-              % (cible, _ps(NOM + ".lnk"), _ps(pythonw), _ps(racine), _ps("Ouvre l'outil de veille des adresses inventées"),
+              % (cible, _ps(NOM + ".lnk"), _ps(pythonw), _ps(racine), _ps("Ouvre Bifurq AIO, la veille des adresses inventées par l'IA de Google"),
                  "$s.IconLocation=%s;" % _ps(icone + ",0") if os.path.isfile(icone) else ""))
     r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                        capture_output=True, text=True, timeout=60,

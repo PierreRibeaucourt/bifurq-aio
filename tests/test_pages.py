@@ -21,7 +21,7 @@ def test_mes_sites_dit_qu_on_peut_fermer_l_onglet_et_quand_l_analyse_tourne():
     html = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, actif_heure_fixe=True, heure_fixe="08:30"), "j")
     assert "Vous pouvez fermer cet onglet." in html
     assert "à chaque démarrage de l'ordinateur et chaque jour à 08:30" in html
-    assert "raccourci <b>Veille des adresses inventées</b> sur votre bureau" in html
+    assert "raccourci <b>Bifurq AIO</b> sur votre bureau" in html
     arretee = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, active=False), "j")
     assert "aucune analyse ne se lance toute seule" in arretee and "même onglet fermé" not in arretee
 
@@ -74,3 +74,10 @@ def test_auteur_en_bas_de_mes_sites():
     html = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
     assert html.rindex("carte-site") < html.index('class="auteur"')          # après les sites
     assert 'href="https://www.linkedin.com/in/pierre-ribeaucourt/" target="_blank" rel="noopener"' in html
+
+
+def test_consigne_masquee_laisse_le_rappel_des_analyses_sous_le_titre():
+    html = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j", consigne=False)
+    assert "Vous pouvez fermer cet onglet." not in html
+    assert "Analyse automatique à chaque démarrage de l&#x27;ordinateur." in html and 'href="/reglages">Changer' in html
+    assert 'action="/masquer-consigne"' in pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")

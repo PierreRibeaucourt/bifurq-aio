@@ -1,4 +1,4 @@
-# Installe (ou retire) la tache planifiee Windows de la veille des adresses inventees.
+# Installe (ou retire) la tache planifiee Windows de Bifurq AIO (veille des adresses inventees).
 # Appele par veille_ia.scheduler_windows, jamais directement par l'utilisateur final.
 #
 # Installer :
@@ -49,7 +49,7 @@ if ($HeureFixe) {
 }
 
 Register-ScheduledTask -TaskName $NomTache -Action $action -Trigger $triggers -Settings $reglages `
-    -Principal $compte -Force -Description "Veille des adresses inventees par l'IA de Google. Script : $CheminScript" | Out-Null
+    -Principal $compte -Force -Description "Bifurq AIO : veille des adresses inventees par l'IA de Google. Script : $CheminScript" | Out-Null
 
 $i = Get-ScheduledTask -TaskName $NomTache | Get-ScheduledTaskInfo
 "{0} installee | prochaine execution {1}" -f $NomTache, $i.NextRunTime

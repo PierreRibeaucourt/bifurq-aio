@@ -204,7 +204,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             routes = {"/activer": self._activer, "/analyser": self._analyser, "/ignorer": self._ignorer,
                       "/retirer": self._retirer, "/reglages": self._reglages, "/arreter": self._arreter,
-                      "/modifier": self._modifier}
+                      "/modifier": self._modifier, "/masquer-consigne": self._masquer_consigne}
             if self.path not in routes:
                 return self._repondre(pages.erreur("Page introuvable", "Cette page n'existe pas."), 404)
             routes[self.path](champs)
@@ -219,7 +219,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         en_cours = analyse_active()
         self._repondre(pages.tableau_de_bord(donnees["sites"], watch.lire_etat(), en_cours,
                                              watch.lire_progression() if en_cours else None,
-                                             donnees["planification"], _session["jeton_formulaire"]))
+                                             donnees["planification"], _session["jeton_formulaire"],
+                                             consigne=not donnees.get("interface", {}).get("consigne_masquee")))
 
     def _connecter(self, q):
         _session["reconnecter"] = _un(q, "site") or None
@@ -328,6 +329,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             config.definir_planification(au_demarrage, actif_heure_fixe, heure_fixe)
             scheduler_windows.installer(au_demarrage, actif_heure_fixe, heure_fixe)
         lancer_analyse()
+        self._rediriger("/", 303)
+
+    def _masquer_consigne(self, champs):
+        config.masquer_consigne()
         self._rediriger("/", 303)
 
     def _analyser(self, champs):

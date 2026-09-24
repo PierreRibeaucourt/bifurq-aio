@@ -215,3 +215,11 @@ def test_page_inconnue_404(serveur):
 def test_ping(serveur):
     code, corps, _ = _requete(serveur, "GET", "/ping")
     assert code == 200 and corps == "%s %s" % (server.PING, server.EMPREINTE)
+
+
+def test_masquer_la_consigne_de_mes_sites(serveur):
+    config.ajouter_site("exemple", nom="exemple.fr", propriete="sc-domain:exemple.fr", sitemaps=[])
+    assert "Vous pouvez fermer cet onglet." in _requete(serveur, "GET", "/")[1]
+    code, _, lieu = _requete(serveur, "POST", "/masquer-consigne", {"jeton": server._session["jeton_formulaire"]})
+    assert (code, lieu) == (303, "/")
+    assert "Vous pouvez fermer cet onglet." not in _requete(serveur, "GET", "/")[1]

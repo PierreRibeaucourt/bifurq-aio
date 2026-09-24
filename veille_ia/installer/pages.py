@@ -4,7 +4,7 @@ import html
 import json
 
 from ..report import SCRIPT_TABLEAU, entete_site, tableau_adresses
-from ..style import bandeau_auteur, gabarit
+from ..style import NOM_OUTIL, bandeau_auteur, gabarit
 
 e = html.escape
 
@@ -38,9 +38,9 @@ def texte_planification(planif):
     return "Analyse automatique %s." % moments if moments else "Aucune analyse automatique."
 
 
-def _consigne(planif):
+def _consigne(planif, jeton):
     """Ce que l'utilisateur peut faire une fois ses sites ajoutés : fermer l'onglet, et comment
-    l'outil continue sans lui."""
+    l'outil continue sans lui. Une croix la masque pour de bon."""
     moments = _moments(planif)
     if moments:
         quand = ('Les analyses se lancent toutes seules %s, même onglet fermé. <a href="/reglages">Changer</a>'
@@ -49,12 +49,14 @@ def _consigne(planif):
         quand = ('La surveillance automatique est arrêtée : aucune analyse ne se lance toute seule. '
                  '<a href="/reglages">La reprendre</a>')
     return """<section class="consigne" aria-label="Fonctionnement de l'outil">
+<form class="consigne-fermer" method="post" action="/masquer-consigne">%s<button type="submit"
+title="Ne plus afficher ce message" aria-label="Ne plus afficher ce message">×</button></form>
 <p class="consigne-titre">Vous pouvez fermer cet onglet.</p>
 <ul><li>%s</li>
 <li>Une notification Windows vous prévient dès qu'une nouvelle adresse est à corriger. Les analyses lancées depuis
 cette page n'en envoient pas : le résultat s'affiche ici.</li>
-<li>Pour revenir ici : raccourci <b>Veille des adresses inventées</b> sur votre bureau.</li></ul>
-</section>""" % quand
+<li>Pour revenir ici : raccourci <b>%s</b> sur votre bureau.</li></ul>
+</section>""" % (_jeton(jeton), quand, e(NOM_OUTIL))
 
 
 def _choix_planification(planif):
@@ -99,7 +101,7 @@ def _champs_dataforseo(dataforseo=None):
 
 
 def accueil():
-    return gabarit("Veille des adresses inventées", """
+    return gabarit(NOM_OUTIL, """
 <section class="accueil">
 <div>
 <h1>Soyez prévenu quand Google invente une adresse de votre site</h1>
@@ -125,7 +127,7 @@ rel="noopener">Pierre Ribeaucourt</a>.</p>
 </ol>""", navigation=False)
 
 
-def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton):
+def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True):
     actif = (progression or {}).get("site") if en_cours else None
     lignes = []
     for cle, cfg in sites.items():
@@ -151,10 +153,13 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton):
                     'Cette page se met à jour toute seule.</p></div>' % detail)
     bouton = ('<button class="bouton" type="submit" disabled><span class="roue"></span>Analyse en cours</button>'
               if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
-    corps = """<div class="entete"><div><h1>Vos sites</h1></div>
+    # consigne masquée : le moment des analyses reste rappelé sous le titre
+    rappel = "" if consigne else '<p class="sous">%s <a href="/reglages">Changer</a></p>' % e(texte_planification(planif))
+    corps = """<div class="entete"><div><h1>Vos sites</h1>%s</div>
 <div class="actions"><form class="enligne" method="post" action="/analyser">%s%s</form>
 <a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s""" % (
-        _jeton(jeton), bouton, _consigne(planif), chantier, "".join(lignes), bandeau_auteur())
+        rappel, _jeton(jeton), bouton, _consigne(planif, jeton) if consigne else "", chantier, "".join(lignes),
+        bandeau_auteur())
     return gabarit("Vos sites", corps, rafraichir=3 if en_cours else None, onglet="sites")
 
 

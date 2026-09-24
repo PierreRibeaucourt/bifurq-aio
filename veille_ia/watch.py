@@ -481,7 +481,7 @@ def _executer(test, interactif):
         titre = ("%s : analyse impossible" % sites[cle]["nom"] if etat[cle]["statut"] == "probleme"
                  else "%s : analyse incomplète" % sites[cle]["nom"])
         if len(a_signaler) > 1:
-            titre = "Veille des adresses : %d sites à vérifier" % len(a_signaler)
+            titre = "Bifurq AIO : %d sites à vérifier" % len(a_signaler)
         if notify_windows.notifier(titre, message[:200], chemin_rapport, journal):
             for cle, message in a_signaler:
                 etat[cle]["probleme_notifie"] = {"date": aujourd_hui, "message": message}
