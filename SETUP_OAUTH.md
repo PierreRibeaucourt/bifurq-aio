@@ -57,7 +57,7 @@ d'avertissement et il n'y a pas de limite d'utilisateurs.
   d'accueil publique de l'outil et une page de règles de confidentialité, sur un domaine
   déclaré dans **Branding**, **Domaines autorisés**. La page d'accueil doit décrire l'outil et
   renvoyer vers les règles de confidentialité. Les deux pages sont dans le dossier `docs/`,
-  publiées par GitHub Pages sur `https://pierreribeaucourt.github.io/veille-adresses-ia/` ; le
+  publiées par GitHub Pages sur `https://pierreribeaucourt.github.io/bifurq-aio/` ; le
   domaine `pierreribeaucourt.github.io` doit être validé dans la Search Console par le compte
   dédié (fichier de validation dans le dépôt `PierreRibeaucourt.github.io`). Dans un fork,
   adapter ces adresses. Remplir ces deux adresses dans **Branding**,

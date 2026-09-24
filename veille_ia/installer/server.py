@@ -37,7 +37,7 @@ from . import pages
 PORT_PREFERE = 8765
 REDIRECT_PATH = "/oauth2/callback"
 INACTIVITE_MAX = 45 * 60
-PING = "veille-adresses-ia"
+PING = "bifurq-aio"
 
 
 def _empreinte():
