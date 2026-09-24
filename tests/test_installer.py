@@ -37,8 +37,9 @@ def test_retire_la_marque_internet_sauf_dans_config(tmp_path):
 def test_environnement_valide(tmp_path):
     venv = tmp_path / "venv"
     assert not installeur.environnement_valide(str(venv))
-    (venv / "Scripts").mkdir(parents=True)
-    (venv / "Scripts" / "pythonw.exe").write_bytes(b"")
+    python = installeur.plateforme.python_du_venv(str(venv))
+    os.makedirs(os.path.dirname(python))
+    open(python, "wb").close()
     (venv / "pyvenv.cfg").write_text("home = %s\nversion = 3.12.0\n" % tmp_path, encoding="utf-8")
     assert installeur.environnement_valide(str(venv))
     (venv / "pyvenv.cfg").write_text("home = %s\n" % (tmp_path / "python-desinstalle"), encoding="utf-8")
@@ -98,6 +99,33 @@ def test_installateur_lance_depuis_le_dossier_installe(tmp_path):
 
 
 def test_mise_a_jour_relance_l_interface_sur_son_port_sans_nouvel_onglet():
-    assert installeur.commande_interface("S")[1:] == ["-m", "veille_ia.installer.server"]
-    assert installeur.commande_interface("S", 51234)[1:] == ["-m", "veille_ia.installer.server", "--port", "51234",
+    assert installeur.commande_interface("V") == [installeur.plateforme.python_du_venv("V"), "-m",
+                                                  "veille_ia.installer.server"]
+    assert installeur.commande_interface("V", 51234)[1:] == ["-m", "veille_ia.installer.server", "--port", "51234",
                                                              "--sans-navigateur"]
+
+
+def test_installe_dans_le_dossier_de_l_utilisateur_propre_au_systeme(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "AppData" / "Local"))
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    dossier = installeur.plateforme.dossier_installation
+    assert dossier("windows") == os.path.join(str(tmp_path / "AppData" / "Local"), "Bifurq AIO")
+    if os.name != "nt":                  # expanduser lit HOME hors Windows seulement
+        assert dossier("mac") == os.path.join(str(tmp_path), "Library", "Application Support", "Bifurq AIO")
+        assert dossier("linux") == os.path.join(str(tmp_path), ".local", "share", "bifurq-aio")
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "donnees"))
+        assert dossier("linux") == os.path.join(str(tmp_path), "donnees", "bifurq-aio")
+
+
+def test_message_de_fin_dit_comment_rouvrir_l_outil(monkeypatch):
+    monkeypatch.setattr(installeur.plateforme, "SYSTEME", "linux")
+    monkeypatch.setattr(installeur, "adresse_interface", lambda destination: "http://127.0.0.1:8765/")
+    monkeypatch.setattr(installeur, "copier_outil", lambda s, d: None)
+    monkeypatch.setattr(installeur, "arreter_interface", lambda d: None)
+    monkeypatch.setattr(installeur, "environnement_valide", lambda d: True)
+    monkeypatch.setattr(installeur, "lancer_interface", lambda *a: None)
+    monkeypatch.setattr(installeur.subprocess, "run", lambda *a, **k: installeur.subprocess.CompletedProcess(a, 0))
+    fin = installeur.installer("source", "destination")
+    assert "Pour le rouvrir plus tard : l'application Bifurq AIO du menu des applications." in fin
+    assert "Adresse de l'outil : http://127.0.0.1:8765/" in fin and "<b>" not in fin

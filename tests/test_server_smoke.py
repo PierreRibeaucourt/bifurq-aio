@@ -8,7 +8,7 @@ import urllib.parse
 
 import pytest
 
-from veille_ia import config, gsc_api, oauth, oauth_client, scheduler_windows, sitemap, watch
+from veille_ia import config, gsc_api, oauth, oauth_client, plateforme, sitemap, watch
 from veille_ia.installer import server
 
 
@@ -133,7 +133,7 @@ def _formulaire_activer(*proprietes):
 def test_activer_ajoute_les_sites_puis_un_second_envoi_ramene_a_mes_sites(serveur, monkeypatch):
     monkeypatch.setattr(sitemap, "deviner_sitemaps",
                         lambda racine: [racine + "sitemap_index.xml"] if "a.fr" in racine else [])
-    monkeypatch.setattr(scheduler_windows, "installer", lambda *args: None)
+    monkeypatch.setattr(plateforme, "planifier", lambda *args: None)
     monkeypatch.setattr(server, "lancer_analyse", lambda: True)
     os.makedirs(config.dossier_config(), exist_ok=True)
     with open(server._chemin_temp(), "w", encoding="utf-8") as f:

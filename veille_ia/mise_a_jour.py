@@ -7,7 +7,7 @@ elle est construite ici, vers l'étiquette de cette version dans le dépôt GitH
 l'outil, et nulle part ailleurs.
 
 La mise à jour est l'installateur de la nouvelle version (installer.pyw), lancé après
-son téléchargement : il copie le code, garde config\\ et relance l'interface, qui
+son téléchargement : il copie le code, garde config/ et relance l'interface, qui
 remplace l'ancienne. Un fichier écrit par Python ne porte pas la marque "provient
 d'Internet" : le Contrôle intelligent des applications ne bloque pas cet installateur."""
 import glob
@@ -121,16 +121,19 @@ def telecharger(version):
 
 
 def python_de_base():
-    """pythonw.exe du Python sur lequel repose l'environnement de l'outil (config\\venv).
-    L'installateur peut devoir recréer cet environnement : il ne doit pas tourner dedans."""
+    """Python sur lequel repose l'environnement de l'outil (config/venv), pythonw.exe sous
+    Windows. L'installateur peut devoir recréer cet environnement : il ne doit pas
+    tourner dedans."""
+    noms = ("pythonw.exe",) if os.name == "nt" else ("python3", "python")
     try:
         with io.open(os.path.join(sys.prefix, "pyvenv.cfg"), encoding="utf-8") as f:
             for ligne in f:
                 cle, _, valeur = ligne.partition("=")
                 if cle.strip() == "home":
-                    candidat = os.path.join(valeur.strip(), "pythonw.exe")
-                    if os.path.isfile(candidat):
-                        return candidat
+                    for nom in noms:
+                        candidat = os.path.join(valeur.strip(), nom)
+                        if os.path.isfile(candidat):
+                            return candidat
     except OSError:
         pass
     return sys.executable
@@ -140,6 +143,10 @@ def lancer_installateur(dossier_code, port):
     """Lance l'installateur téléchargé, détaché de l'interface actuelle, qu'il remplacera.
     port : celui de l'interface actuelle, que la nouvelle reprend pour que la page ouverte
     la retrouve."""
-    detache = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    subprocess.Popen([python_de_base(), os.path.join(dossier_code, "installer.pyw"), "--mise-a-jour", str(port)],
-                     cwd=dossier_code, close_fds=True, creationflags=detache)
+    commande = [python_de_base(), os.path.join(dossier_code, "installer.pyw"), "--mise-a-jour", str(port)]
+    if os.name == "nt":
+        detache = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        subprocess.Popen(commande, cwd=dossier_code, close_fds=True, creationflags=detache)
+    else:                                    # sa propre session : il survit à l'arrêt de l'interface
+        subprocess.Popen(commande, cwd=dossier_code, close_fds=True, start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

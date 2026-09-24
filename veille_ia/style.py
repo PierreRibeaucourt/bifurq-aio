@@ -4,7 +4,9 @@
 Habillage Déviation : la signalétique routière. Une adresse inventée est une route
 qui n'existe pas, la redirection est la déviation. Noir, jaune de chantier, titres
 en Bahnschrift, un panneau par site. Polices : uniquement celles livrées avec
-Windows 10 et 11 (Bahnschrift, Segoe UI, Cascadia), rien à télécharger."""
+le système, rien à télécharger. Bahnschrift, Segoe UI et Cascadia sous Windows ; DIN
+Alternate, San Francisco et SF Mono sur macOS ; sous Linux, les polices de la
+distribution."""
 import html
 import urllib.parse
 
@@ -17,9 +19,9 @@ CSS = """
 --fond:#E9EAEC;--surface:#FFFFFF;--surface-2:#F6F6F4;--texte:#121417;--doux:#545B65;--trait:#D8DBDF;
 --trait-fort:#9EA4AC;--noir:#121417;--jaune:#FFC21A;--jaune-fonce:#F2AF00;--jaune-pale:#FFF5D1;
 --vert:#0B6B3A;--vert-pale:#E3F1E8;--vert-texte:#0A4F2C;--rouge:#C8281E;--rouge-pale:#FBE3E1;--rouge-texte:#8C1C14;
---titre:"Bahnschrift","DIN Alternate","Arial Narrow",sans-serif;
---police:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
---mono:"Cascadia Mono","Cascadia Code",Consolas,monospace}
+--titre:"Bahnschrift","DIN Alternate","Roboto Condensed","Ubuntu Condensed","Arial Narrow",sans-serif;
+--police:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Ubuntu","Cantarell","Noto Sans",sans-serif;
+--mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,"SF Mono",Menlo,"DejaVu Sans Mono",monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fond);color:var(--texte);font:15px/1.55 var(--police);
   display:flex;flex-direction:column;min-height:100vh}

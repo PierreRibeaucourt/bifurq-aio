@@ -21,7 +21,7 @@ CE QUI NE DOIT JAMAIS ARRIVER, ET COMMENT ON L'EMPÊCHE :
     sera de nouveau signalée si la redirection saute un jour ;
   - deux analyses en même temps (tâche planifiée et bouton de l'interface) : un
     verrou dans config/ ;
-  - une même panne notifiée à chaque démarrage du PC : une fois par jour au plus."""
+  - une même panne notifiée à chaque démarrage de l'ordinateur : une fois par jour au plus."""
 import collections
 import concurrent.futures as cf
 import datetime
@@ -32,7 +32,7 @@ import re
 import time
 import traceback
 
-from . import config, gsc_api, matching, report, sitemap, urls
+from . import config, gsc_api, matching, plateforme, report, sitemap, urls
 from .erreurs import ErreurDonnees, ErreurPlanDeSite, expliquer
 from .http_check import ERREURS, ControleurHTTP, corrigee
 
@@ -140,22 +140,6 @@ def lire_progression():
         return None
 
 
-def _processus_actif(pid):
-    """Sans os.kill : sous Windows, os.kill termine le processus au lieu de le sonder."""
-    try:
-        import ctypes
-        k = ctypes.windll.kernel32
-        h = k.OpenProcess(0x1000, False, int(pid))        # PROCESS_QUERY_LIMITED_INFORMATION
-        if not h:
-            return False
-        code = ctypes.c_ulong()
-        ok = k.GetExitCodeProcess(h, ctypes.byref(code))
-        k.CloseHandle(h)
-        return bool(ok) and code.value == 259               # STILL_ACTIVE
-    except Exception:
-        return True                                         # dans le doute, ne pas voler le verrou
-
-
 def chemin_verrou():
     return os.path.join(config.dossier_config(), "veille.lock")
 
@@ -168,7 +152,7 @@ def analyse_en_cours():
         v = json.load(io.open(p, encoding="utf-8"))
     except ValueError:
         return False
-    return time.time() - v.get("debut", 0) < VERROU_MAX and _processus_actif(v.get("pid", 0))
+    return time.time() - v.get("debut", 0) < VERROU_MAX and plateforme.processus_actif(v.get("pid", 0))
 
 
 def _prendre_verrou():
@@ -401,7 +385,7 @@ def _publier_etat_du_site(cle, entree):
 def executer(test=False, interactif=False, cles=None):
     """Une analyse de tous les sites, ou des seuls sites de cles (bouton Analyser d'un
     site, ou des sites affichés dans l'interface). interactif=True : lancée depuis
-    l'interface, que l'utilisateur regarde ; pas de notification Windows, les adresses
+    l'interface, que l'utilisateur regarde ; pas de notification, les adresses
     affichées comptent comme vues. Rend un résumé, ou {"deja_en_cours": True}."""
     if not _prendre_verrou():
         return {"deja_en_cours": True}
@@ -464,7 +448,6 @@ def _executer(test, interactif, cles=None):
     chemin_rapport = report.ecrire(D, report.rendre(etat, sites, maintenant), aujourd_hui)
 
     # notifications
-    from . import notify_windows
     envoyee = True
     total = sum(len(v) for v in nouvelles.values())
     if total and not interactif:
@@ -473,11 +456,11 @@ def _executer(test, interactif, cles=None):
             titre = "%s : %d adresse%s à corriger" % (sites[k]["nom"], total, "s" if total > 1 else "")
         else:
             titre = "%d adresses à corriger sur %d sites" % (total, len(nouvelles))
-        texte = "Google montre des adresses de votre site qui n'existent pas. Cliquez pour voir quoi faire."
+        texte = "Google montre des adresses de votre site qui n'existent pas. " + plateforme.appel_notification()
         if test:
             journal("notification (non envoyée en test) : %s | %s" % (titre, texte))
         else:
-            envoyee = notify_windows.notifier(titre, texte, chemin_rapport, journal)
+            envoyee = plateforme.notifier(titre, texte, chemin_rapport, journal)
 
     # problèmes : une notification par jour au plus, et seulement si le problème a changé
     a_signaler = []
@@ -495,7 +478,7 @@ def _executer(test, interactif, cles=None):
                  else "%s : analyse incomplète" % sites[cle]["nom"])
         if len(a_signaler) > 1:
             titre = "Bifurq AIO : %d sites à vérifier" % len(a_signaler)
-        if notify_windows.notifier(titre, message[:200], chemin_rapport, journal):
+        if plateforme.notifier(titre, message[:200], chemin_rapport, journal):
             for cle, message in a_signaler:
                 etat[cle]["probleme_notifie"] = {"date": aujourd_hui, "message": message}
 

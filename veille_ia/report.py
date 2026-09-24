@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Affichage de l'état d'un site et de ses adresses inventées, commun à l'interface
-et au rapport HTML que la notification Windows ouvre."""
+et au rapport HTML de chaque analyse."""
 import csv
 import datetime
 import html
@@ -9,6 +9,7 @@ import os
 import re
 import urllib.parse
 
+from . import plateforme
 from .style import FONCTIONNEMENT, bandeau_auteur, gabarit
 
 e = html.escape
@@ -264,9 +265,10 @@ def rendre(etat, sites, maintenant):
     heure = datetime.datetime.fromisoformat(maintenant).strftime("%H:%M")
     corps = ("<div class=\"entete\"><div><h1>Rapport du %s</h1>"
              "<p class=\"sous\">Analyse terminée à %s. Pour ignorer une adresse ou modifier un site, ouvrez l'outil "
-             "avec le raccourci <b>Bifurq AIO</b> de votre bureau.</p></div></div>%s%s"
-             "<p class=\"pied\">Rapports précédents : dossier <code>config\\rapports</code> de l'outil.</p>"
-             % (date_longue(maintenant), heure, "".join(blocs), bandeau_auteur()))
+             "avec %s.</p></div></div>%s%s"
+             "<p class=\"pied\">Rapports précédents : dossier <code>%s</code> de l'outil.</p>"
+             % (date_longue(maintenant), heure, plateforme.raccourci(), "".join(blocs), bandeau_auteur(),
+                os.path.join("config", "rapports")))
     return gabarit("Rapport du %s" % date_longue(maintenant), corps, navigation=False, script=SCRIPT_TABLEAU)
 
 

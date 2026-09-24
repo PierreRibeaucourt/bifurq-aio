@@ -3,7 +3,7 @@
 import html
 import json
 
-from .. import __version__
+from .. import __version__, plateforme
 from ..report import ORDRE_STATUTS, SCRIPT_TABLEAU, entete_site, ordre_des_sites, statut_du_site, tableau_adresses
 from ..style import NOM_OUTIL, bandeau_auteur, gabarit
 
@@ -54,10 +54,10 @@ def _consigne(planif, jeton):
 title="Ne plus afficher ce message" aria-label="Ne plus afficher ce message">×</button></form>
 <p class="consigne-titre">Vous pouvez fermer cet onglet.</p>
 <ul><li>%s</li>
-<li>Une notification Windows vous prévient dès qu'une nouvelle adresse est à corriger. Les analyses lancées depuis
+<li>Une notification vous prévient dès qu'une nouvelle adresse est à corriger. Les analyses lancées depuis
 cette page n'en envoient pas : le résultat s'affiche ici.</li>
-<li>Pour revenir ici : raccourci <b>%s</b> sur votre bureau.</li></ul>
-</section>""" % (_jeton(jeton), quand, e(NOM_OUTIL))
+<li>Pour revenir ici : %s.</li></ul>
+</section>""" % (_jeton(jeton), quand, plateforme.raccourci())
 
 
 def _choix_planification(planif):
@@ -461,7 +461,7 @@ def mise_a_jour_en_cours(version, empreinte):
 <div class="chantier" role="status"><span class="roue"></span><p>Installation de la version %s. Cette page se
 recharge toute seule dans quelques secondes.</p></div>
 <div class="encadre alerte" id="lent" hidden><p>La mise à jour prend plus de temps que prévu. Fermez cette page
-et rouvrez %s avec le raccourci de votre bureau.</p></div></div>""" % (e(version), e(NOM_OUTIL)))
+et rouvrez l'outil avec %s.</p></div></div>""" % (e(version), plateforme.raccourci()))
     return gabarit("Mise à jour", corps, navigation=False,
                    script=SCRIPT_MISE_A_JOUR % (json.dumps(empreinte), json.dumps(version)))
 
