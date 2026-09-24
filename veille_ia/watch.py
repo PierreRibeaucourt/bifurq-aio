@@ -423,7 +423,8 @@ def _executer(test, interactif, cles=None):
         return {"resultats": [], "echecs": {}, "reportes": [], "nouvelles": {}, "notifiee": False, "rapport": None}
 
     resultats, echecs, reportes, entrees, suivis = [], {}, [], {}, {}
-    for cle, cfg in sites.items():
+    for cle in report.ordre_des_sites(sites, lire_etat()):      # dans l'ordre de Mes sites
+        cfg = sites[cle]
         if cles is not None and cle not in cles:
             continue
         if time.time() - t0 > DUREE_MAX:
