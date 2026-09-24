@@ -199,6 +199,14 @@ details.avance[open]>summary::before{transform:rotate(45deg)}
 details.avance>summary .aide{font-weight:400;font-size:13px;color:var(--doux)}
 .avance-contenu{padding:18px 16px 20px;border-top:1px solid var(--trait)}
 
+/* choix des sites : filtre au-dessus de la liste */
+.recherche{margin:20px 0 4px}
+.recherche input{display:block;width:100%;padding:11px 14px;border:1.5px solid var(--trait-fort);border-radius:3px;
+  font:inherit;font-size:15.5px;background:var(--surface);color:var(--texte)}
+.recherche input:hover{border-color:var(--doux)}
+.recherche p{margin:14px 0 0}
+label.choix[hidden]{display:none}
+
 /* choix des sites : réglages et bouton collés en bas de l'écran, même avec une longue liste */
 .barre-fixe{position:sticky;bottom:0;z-index:3;margin-top:18px;padding:14px 18px;background:var(--surface);
   border:1px solid var(--trait);border-top:4px solid var(--noir);border-radius:4px 4px 0 0;

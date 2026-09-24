@@ -26,7 +26,11 @@ SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-_cache = {}                      # chemin de jeton -> (access_token, expiration_epoch)
+# refresh_token -> (access_token, expiration_epoch). Clé : la connexion elle-même, pas le
+# chemin du fichier. Le même chemin sert à des connexions successives (fichier temporaire
+# de chaque nouvelle connexion, site retiré puis ajouté de nouveau) : une clé par chemin
+# ressortait l'accès du compte Google précédent, qui listait alors ses propres sites.
+_cache = {}
 
 
 def nouvel_etat():
@@ -38,7 +42,9 @@ def url_autorisation(redirect_uri, state):
     q = urllib.parse.urlencode({
         "client_id": oauth_client.CLIENT_ID, "redirect_uri": redirect_uri,
         "response_type": "code", "scope": SCOPE, "access_type": "offline",
-        "prompt": "consent", "state": state, "include_granted_scopes": "true"})
+        # select_account : Google propose toujours le choix du compte, au lieu de reprendre
+        # en silence celui déjà ouvert dans le navigateur (utile avec plusieurs comptes)
+        "prompt": "consent select_account", "state": state, "include_granted_scopes": "true"})
     return AUTH_URL + "?" + q
 
 
@@ -76,14 +82,15 @@ def enregistrer_jeton(chemin, echange):
 
 def jeton_frais(chemin):
     """Access token (valable 1 h) rafraîchi depuis le refresh_token stocké dans le
-    fichier pointé par chemin. Mis en cache mémoire, renouvelé 5 minutes avant
-    échéance."""
+    fichier pointé par chemin, relu à chaque appel. Mis en cache mémoire, renouvelé 5
+    minutes avant échéance."""
     with _verrou:
-        if chemin in _cache and _cache[chemin][1] > time.time():
-            return _cache[chemin][0]
         if not os.path.exists(chemin):
             raise ErreurConnexionGoogle("Ce site n'est pas encore connecté à un compte Google.", chemin)
         t = json.load(io.open(chemin, encoding="utf-8"))
+        cle = t["refresh_token"]
+        if cle in _cache and _cache[cle][1] > time.time():
+            return _cache[cle][0]
         corps = urllib.parse.urlencode({
             "client_id": t["client_id"], "client_secret": t["client_secret"],
             "refresh_token": t["refresh_token"], "grant_type": "refresh_token"}).encode()
@@ -97,8 +104,8 @@ def jeton_frais(chemin):
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             raise ErreurReseau("Google ne répond pas : connexion Internet coupée ? Nouvel essai à la "
                                "prochaine analyse.", str(e))
-        _cache[chemin] = (r["access_token"], time.time() + int(r.get("expires_in", 3600)) - 300)
-        return _cache[chemin][0]
+        _cache[cle] = (r["access_token"], time.time() + int(r.get("expires_in", 3600)) - 300)
+        return _cache[cle][0]
 
 
 def trouver_port_libre(prefere):
