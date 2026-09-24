@@ -64,7 +64,7 @@ principal() {
     [ -n "$INSTALLATEUR" ] || erreur "Le téléchargement ne contient pas l'installateur de l'outil."
 
     printf 'Installation...\n'
-    "$PYTHON" "$INSTALLATEUR" </dev/null
+    "$PYTHON" "$INSTALLATEUR" --terminal </dev/null
 }
 
 # tout le script est lu avant de s'exécuter : un téléchargement coupé ne lance rien

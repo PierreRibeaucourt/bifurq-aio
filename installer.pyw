@@ -48,29 +48,42 @@ TITRE = "Bifurq AIO"
 SANS_FENETRE = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
+def dans_un_terminal():
+    """Lancé depuis un Terminal (installer.sh passe --terminal, qui capte parfois la
+    sortie) plutôt que par un double-clic ou par le bouton Mettre à jour."""
+    return "--terminal" in sys.argv or bool(sys.stdout and sys.stdout.isatty())
+
+
 def message(texte, erreur=False):
     if plateforme.SYSTEME == "windows":
         import ctypes
         # icône, premier plan et au-dessus des autres fenêtres : le navigateur s'ouvre en même temps
         ctypes.windll.user32.MessageBoxW(None, texte, TITRE, (0x10 if erreur else 0x40) | 0x10000 | 0x40000)
         return
-    print("\n%s\n" % texte, file=sys.stderr if erreur else sys.stdout, flush=True)
-    if erreur and not (sys.stderr and sys.stderr.isatty()):
-        _alerte(texte)                       # mise à jour lancée par l'interface : aucun Terminal
+    if sys.stdout:
+        print("\n%s\n" % texte, file=sys.stderr if erreur else sys.stdout, flush=True)
+    if not dans_un_terminal():
+        fenetre(texte, erreur)
 
 
-def _alerte(texte):
-    """Une erreur visible hors du Terminal (macOS : fenêtre d'alerte ; Linux :
-    notification)."""
-    try:
-        if plateforme.SYSTEME == "mac":
-            subprocess.run(["osascript", "-e", "on run argv", "-e",
-                            "display alert (item 1 of argv) message (item 2 of argv) as critical",
-                            "-e", "end run", TITRE, texte], capture_output=True, timeout=600)
-        elif shutil.which("notify-send"):
-            subprocess.run(["notify-send", "--app-name=" + TITRE, TITRE, texte], capture_output=True, timeout=30)
-    except Exception:
-        pass
+def fenetre(texte, erreur=False):
+    """Le message dans une fenêtre, sans Terminal : boîte de dialogue sur macOS ; sous
+    Linux, zenity (GNOME) ou kdialog (KDE), sinon une notification."""
+    if plateforme.SYSTEME == "mac":
+        commandes = [["osascript", "-e", "on run argv", "-e", "activate", "-e",
+                      'display dialog (item 2 of argv) with title (item 1 of argv) buttons {"OK"} '
+                      'default button "OK" with icon %s giving up after 600' % ("stop" if erreur else "note"),
+                      "-e", "end run", TITRE, texte]]
+    else:
+        commandes = [["zenity", "--error" if erreur else "--info", "--title", TITRE, "--width", "460", "--text", texte],
+                     ["kdialog", "--title", TITRE, "--error" if erreur else "--msgbox", texte],
+                     ["notify-send", "--app-name=" + TITRE, TITRE, texte]]
+    for commande in commandes:                   # le premier qui s'affiche
+        try:
+            if shutil.which(commande[0]) and subprocess.run(commande, capture_output=True, timeout=660).returncode in (0, 1):
+                return
+        except Exception:
+            pass
 
 
 def meme_dossier(a, b):
@@ -251,7 +264,11 @@ def installer(source=ICI, destination=DESTINATION, port=None):
         return texte + ("\n\nVous pouvez supprimer le fichier ZIP et le dossier téléchargés : l'outil n'en a "
                         "plus besoin.")
     adresse = adresse_interface(destination)
-    return texte + ("\nAdresse de l'outil : %s" % adresse if adresse else "")
+    texte += "\nAdresse de l'outil : %s" % adresse if adresse else ""
+    if plateforme.SYSTEME == "mac" and ".app/Contents/" in source:
+        texte += ("\n\nVous pouvez supprimer l'application Installer Bifurq AIO et le fichier ZIP téléchargés : "
+                  "l'outil n'en a plus besoin.")
+    return texte
 
 
 if __name__ == "__main__":

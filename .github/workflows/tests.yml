@@ -52,3 +52,15 @@ jobs:
           echo "PYTHON_ESSAI=$P" >> "$GITHUB_ENV"
       - name: Installation, interface, planification, notification, mise à jour
         run: sh .github/essai_installation.sh
+
+  paquets:
+    name: Paquets par double-clic (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construction et essai comme un utilisateur
+        run: sh .github/essai_paquets.sh
