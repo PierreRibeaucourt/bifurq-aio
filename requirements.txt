@@ -1,0 +1,3 @@
+# Aucune dépendance externe : tout l'outil tient sur la bibliothèque standard
+# Python, pour qu'il n'y ait rien qui puisse échouer à l'installation (réseau
+# d'entreprise, proxy, antivirus) chez un utilisateur non technique.

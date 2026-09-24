@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Règles de confidentialité</title>
+<meta name="description" content="Règles de confidentialité de l'outil Veille des adresses inventées : quelles données Google il lit, où elles restent, comment retirer l'accès.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bandeau"><div class="bandeau-int">
+<a class="marque" href="./"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#FFC21A"/><rect x="2.6" y="2.6" width="22.8" height="22.8" rx="3" fill="none" stroke="#121417" stroke-width="1.5"/><path d="M10 21.5v-6a3.5 3.5 0 0 1 3.5-3.5H19" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round"/><path d="M16 8.2l3.8 3.8-3.8 3.8" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Veille des adresses inventées</span></a>
+<nav><a href="./">Présentation</a><a href="confidentialite.html" aria-current="page">Confidentialité</a><a href="https://github.com/PierreRibeaucourt/veille-adresses-ia">Code source</a></nav>
+</div></header>
+
+<main class="page etroit texte">
+<h1>Règles de confidentialité</h1>
+<p class="sous">Outil « Veille des adresses inventées ». Dernière mise à jour : 24 septembre 2026.</p>
+
+<div class="encadre" style="margin-top:24px">
+<p><b>En bref :</b> l'outil lit votre Search Console en lecture seule, garde tout sur votre ordinateur et
+n'envoie rien à son auteur. Vous pouvez retirer son accès à tout moment depuis votre compte Google.</p>
+</div>
+
+<h2>Qui publie l'outil</h2>
+<p>« Veille des adresses inventées » est un logiciel gratuit et open source, publié par Pierre Ribeaucourt à
+titre personnel, sous licence MIT. Il s'installe et fonctionne sur votre ordinateur Windows. Il n'existe aucun
+service en ligne associé : l'auteur n'exploite aucun serveur qui recevrait vos données.</p>
+
+<h2>Les données Google que l'outil lit</h2>
+<p>Quand vous cliquez sur <b>Connecter mon compte Google</b>, l'outil vous demande un seul accès :
+<code>https://www.googleapis.com/auth/webmasters.readonly</code>, qui permet de consulter la Search Console
+<b>sans rien pouvoir y modifier</b>. Avec cet accès, il lit :</p>
+<ul>
+<li>la liste des sites (propriétés) auxquels votre compte a accès dans la Search Console, pour vous laisser
+choisir lesquels surveiller ;</li>
+<li>pour les sites choisis, les adresses de pages vues dans les résultats de Google au cours des trois derniers
+mois, avec leur nombre d'affichages ;</li>
+<li>pour les adresses suspectes, le résultat de l'inspection d'URL : si Google connaît la page et s'il l'a déjà
+explorée.</li>
+</ul>
+<p>L'outil ne lit ni votre nom, ni votre adresse e-mail, ni aucune autre donnée de votre compte Google.</p>
+
+<h2>Ce que l'outil en fait</h2>
+<p>Ces données servent uniquement à repérer les adresses de votre site inventées par l'IA de Google, à vérifier
+qu'elles répondent bien en erreur et à vous proposer la page vers laquelle les rediriger. Elles ne servent à
+rien d'autre : ni publicité, ni revente, ni profilage, ni entraînement d'un modèle d'intelligence artificielle.</p>
+<p>L'utilisation et le transfert à toute autre application des informations reçues des API Google respectent le
+<a href="https://developers.google.com/terms/api-services-user-data-policy">Règlement sur les données utilisateur
+des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>
+
+<h2>Où les données sont conservées</h2>
+<p>Uniquement sur votre ordinateur, dans le dossier <code>config</code> de l'outil :</p>
+<ul>
+<li>la connexion Google de chaque site (<code>config\&lt;site&gt;\jeton_gsc.json</code>), qui permet à l'outil
+de relancer l'analyse sans vous redemander de vous connecter ;</li>
+<li>les résultats d'inspection et de vérification des adresses, gardés pour ne pas refaire les mêmes demandes ;</li>
+<li>les rapports d'analyse des 60 derniers jours, et un journal technique de fonctionnement.</li>
+</ul>
+<p>Ces fichiers ne sont envoyés nulle part. Toute personne qui utilise votre session Windows peut les lire :
+protégez l'accès à votre ordinateur comme pour n'importe quel autre fichier personnel.</p>
+
+<h2>Ce qui sort de votre ordinateur</h2>
+<ul>
+<li><b>Vers Google</b> : les demandes nécessaires à l'analyse, adressées à l'API Search Console avec votre propre
+connexion.</li>
+<li><b>Vers votre propre site</b> : une visite de chaque adresse suspecte, pour vérifier qu'elle répond bien en
+erreur.</li>
+<li><b>Vers DataForSEO, seulement si vous l'avez choisi</b> : si vous renseignez vos propres identifiants
+DataForSEO dans les réglages avancés, la même vérification passe par ce service, qui reçoit alors les adresses à
+vérifier. Ce transfert se fait avec votre propre compte DataForSEO et relève de ses conditions.</li>
+</ul>
+<p>Rien n'est envoyé à l'auteur de l'outil ni à aucun autre tiers. L'outil ne contient ni mesure d'audience,
+ni publicité, ni suivi.</p>
+
+<h2>Supprimer vos données et retirer l'accès</h2>
+<ul>
+<li><b>Retirer un site</b> : dans l'outil, <b>Modifier</b> puis <b>Retirer ce site</b>. Ses données locales,
+connexion Google comprise, sont effacées.</li>
+<li><b>Tout effacer</b> : supprimez le dossier de l'outil.</li>
+<li><b>Retirer l'accès côté Google</b> : sur
+<a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>, choisissez
+« Veille des adresses inventées », puis supprimez son accès. L'outil ne pourra plus rien lire tant que vous ne
+vous reconnectez pas.</li>
+</ul>
+
+<h2>Cette page web</h2>
+<p>Ce site de présentation est hébergé par GitHub Pages. Il n'utilise ni cookie, ni outil de mesure d'audience.
+GitHub peut enregistrer des données techniques de connexion, comme votre adresse IP, selon sa
+<a href="https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement">déclaration de
+confidentialité</a>.</p>
+
+<h2>Changements et contact</h2>
+<p>Toute modification de ces règles est publiée sur cette page, avec sa date de mise à jour, et son historique
+reste consultable dans le <a href="https://github.com/PierreRibeaucourt/veille-adresses-ia">dépôt du code
+source</a>.</p>
+<p>Pour toute question, ouvrez une demande sur
+<a href="https://github.com/PierreRibeaucourt/veille-adresses-ia/issues">la page des problèmes du projet</a>.
+Pour une question qui ne doit pas être publique, contactez l'auteur depuis son
+<a href="https://github.com/PierreRibeaucourt">profil GitHub</a>.</p>
+
+<footer class="pied">
+<p><a href="./">Présentation de l'outil</a> ·
+<a href="https://github.com/PierreRibeaucourt/veille-adresses-ia">Code source</a></p>
+</footer>
+</main>
+</body>
+</html>

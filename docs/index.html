@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veille des adresses inventées</title>
+<meta name="description" content="Outil gratuit pour Windows : repère dans votre Search Console les adresses de votre site inventées par l'IA de Google et vous indique vers quelle page les rediriger.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bandeau"><div class="bandeau-int">
+<a class="marque" href="./"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="5" fill="#FFC21A"/><rect x="2.6" y="2.6" width="22.8" height="22.8" rx="3" fill="none" stroke="#121417" stroke-width="1.5"/><path d="M10 21.5v-6a3.5 3.5 0 0 1 3.5-3.5H19" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round"/><path d="M16 8.2l3.8 3.8-3.8 3.8" fill="none" stroke="#121417" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Veille des adresses inventées</span></a>
+<nav><a href="./" aria-current="page">Présentation</a><a href="confidentialite.html">Confidentialité</a><a href="https://github.com/PierreRibeaucourt/veille-adresses-ia">Code source</a></nav>
+</div></header>
+
+<main class="page">
+<section class="accueil">
+<div>
+<h1>Soyez prévenu quand Google invente une adresse de votre site</h1>
+<p class="chapo">Les réponses de l'IA de Google (AI Overview et AI Mode) citent parfois des pages de votre site
+qui n'ont jamais existé. Les internautes qui cliquent arrivent sur une page d'erreur. Cet outil gratuit repère
+ces adresses dans votre Search Console et vous indique vers quelle page les rediriger.</p>
+<div class="actions">
+<a class="bouton" href="https://github.com/PierreRibeaucourt/veille-adresses-ia/archive/refs/heads/main.zip">Télécharger pour Windows</a>
+<a class="bouton secondaire" href="https://github.com/PierreRibeaucourt/veille-adresses-ia">Voir le code source</a>
+</div>
+<p class="note">Gratuit et open source (licence MIT). Windows 10 ou 11.</p>
+</div>
+<div class="pancarte" aria-hidden="true">
+<span class="pancarte-titre">Déviation</span>
+<div class="pancarte-ligne"><span class="pictos croix">×</span><s>/guide/choisir-son-velo-electrque</s></div>
+<div class="pancarte-ligne"><span class="pictos fleche">→</span><span>/guide/choisir-son-velo-electrique</span></div>
+</div>
+</section>
+
+<section class="bloc">
+<h2>Comment ça marche</h2>
+<ol class="etapes">
+<li>Vous connectez le compte Google qui gère votre Search Console, en lecture seule.</li>
+<li>L'outil cherche les adresses de votre site vues dans Google qui répondent en erreur et que Google n'a jamais explorées.</li>
+<li>Pour chacune, il propose la page réelle la plus proche. Vous posez la redirection vous-même.</li>
+</ol>
+<p class="sous">L'analyse se relance seule, au démarrage de l'ordinateur ou chaque jour à l'heure choisie.
+Une notification Windows vous prévient quand une nouvelle adresse est à corriger. L'outil ne modifie jamais votre site.</p>
+</section>
+
+<section class="bloc">
+<h2>Installer</h2>
+<div class="carte">
+<ol>
+<li>Téléchargez l'outil avec le bouton ci-dessus et décompressez le fichier ZIP.</li>
+<li>Double-cliquez sur <code>installer.bat</code>. Si Python manque, sa page de téléchargement s'ouvre : installez-le en cochant <b>Add python.exe to PATH</b>, puis relancez <code>installer.bat</code>.</li>
+<li>L'outil s'ouvre dans votre navigateur. Cliquez sur <b>Connecter mon compte Google</b>, choisissez le site à surveiller, et c'est tout.</li>
+</ol>
+</div>
+</section>
+
+<section class="bloc">
+<h2>Pourquoi l'outil demande l'accès à votre Search Console</h2>
+<div class="carte">
+<p>Pour trouver les adresses inventées, l'outil a besoin de lire les pages de votre site que Google affiche dans
+ses résultats, et de savoir si Google les a déjà explorées. Il demande pour cela un seul accès, en <b>lecture
+seule</b> : <code>webmasters.readonly</code>. Il ne peut rien modifier dans votre Search Console.</p>
+<p>Tout se passe sur votre ordinateur. Vos données Search Console et votre connexion Google ne passent par
+aucun serveur de l'auteur de l'outil, qui n'y a aucun accès. Le détail est dans les
+<a href="confidentialite.html">règles de confidentialité</a>.</p>
+</div>
+</section>
+
+<footer class="pied">
+<p>Projet personnel open source de Pierre Ribeaucourt, publié sous licence MIT.
+<a href="confidentialite.html">Règles de confidentialité</a> ·
+<a href="https://github.com/PierreRibeaucourt/veille-adresses-ia">Code source</a> ·
+<a href="https://github.com/PierreRibeaucourt/veille-adresses-ia/issues">Signaler un problème</a></p>
+</footer>
+</main>
+</body>
+</html>
