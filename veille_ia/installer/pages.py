@@ -157,12 +157,26 @@ def _ordre(cle, cfg, es):
     return (ORDRE_STATUTS.index(_statut(es)), -len(es.get("a_rediriger") or []), cfg["nom"].lower(), cle)
 
 
-def _bouton_analyser(cle, jeton, en_cours, texte="Analyser", retour=False):
-    """Analyse de ce seul site."""
+# icônes des boutons, au trait comme celle des réglages
+ICONE_MODIFIER = ('<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" '
+                  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                  '<path d="M4 20l1.2-4.6L16.4 4.2a2.1 2.1 0 0 1 3 3L8.2 18.4 4 20z"/><path d="M14.4 6.2l3 3"/></svg>')
+ICONE_ANALYSER = ('<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" '
+                  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                  '<path d="M20.5 12a8.5 8.5 0 1 1-2.5-6l2.5 3"/><path d="M20.5 3.5V9H15"/></svg>')
+
+
+def _bouton_analyser(cle, jeton, en_cours, nom, texte=None, retour=False):
+    """Analyse de ce seul site : l'icône seule dans Mes sites, l'icône et texte sur la page du site."""
+    if texte:
+        classe, contenu, etiquette = "bouton secondaire", ICONE_ANALYSER + texte, ""
+    else:
+        classe, contenu = "bouton secondaire icone", ICONE_ANALYSER
+        etiquette = ' title="Analyser ce site" aria-label="Analyser %s"' % e(nom)
     return ('<form class="enligne" method="post" action="/analyser">%s<input type="hidden" name="cle" value="%s">%s'
-            '<button class="bouton secondaire" type="submit"%s>%s</button></form>'
+            '<button class="%s" type="submit"%s%s>%s</button></form>'
             % (_jeton(jeton), e(cle), '<input type="hidden" name="retour" value="site">' if retour else "",
-               " disabled" if en_cours else "", texte))
+               classe, etiquette, " disabled" if en_cours else "", contenu))
 
 
 def _outils_sites(sites, etat):
@@ -189,7 +203,8 @@ var q=document.getElementById('recherche-sites'),vide=document.getElementById('s
 var filtres=[].slice.call(document.querySelectorAll('.filtre[data-statut]'));
 var form=document.querySelector('form.analyser-sites');
 var cles=form&&form.querySelector('.cles'),bouton=form&&form.querySelector('button');
-var libre=form&&!form.hasAttribute('data-en-cours'),statut='',MEMOIRE='bifurq-filtre-sites';
+var libelle=bouton&&bouton.querySelector('.libelle');
+var libre=libelle&&!form.hasAttribute('data-en-cours'),statut='',MEMOIRE='bifurq-filtre-sites';
 function plat(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function lire(){try{var v=JSON.parse(sessionStorage.getItem(MEMOIRE)||'{}');if(q&&v.q)q.value=v.q;statut=v.statut||'';}catch(e){}}
 function garder(){try{sessionStorage.setItem(MEMOIRE,JSON.stringify({q:q?q.value:'',statut:statut}));}catch(e){}}
@@ -201,8 +216,8 @@ filtres.forEach(function(f){f.setAttribute('aria-pressed',f.getAttribute('data-s
 if(vide)vide.hidden=vus.length>0;
 if(libre){cles.innerHTML='';
 if(t||statut){vus.forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name='cle';i.value=k;cles.appendChild(i);});
-bouton.textContent=vus.length===1?'Analyser le site affiché':'Analyser les '+vus.length+' sites affichés';bouton.disabled=vus.length===0;}
-else{bouton.textContent='Analyser maintenant';bouton.disabled=false;}}
+libelle.textContent=vus.length===1?'Analyser le site affiché':'Analyser les '+vus.length+' sites affichés';bouton.disabled=vus.length===0;}
+else{libelle.textContent='Analyser maintenant';bouton.disabled=false;}}
 garder();}
 if(q){q.addEventListener('input',appliquer);
 q.addEventListener('keydown',function(ev){if(ev.key==='Escape'){q.value='';appliquer();}});}
@@ -229,8 +244,9 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
             actions.append('<a class="bouton%s" href="%s">Voir les adresses</a>' % (" secondaire" if reconnecter else "", lien))
         elif es.get("statut"):
             actions.append('<a class="bouton secondaire" href="%s">Voir le détail</a>' % lien)
-        actions.append(_bouton_analyser(cle, jeton, en_cours))
-        actions.append('<a class="bouton secondaire" href="/modifier?cle=%s">Modifier</a>' % e(cle))
+        actions.append(_bouton_analyser(cle, jeton, en_cours, cfg["nom"]))
+        actions.append('<a class="bouton secondaire icone" href="/modifier?cle=%s" title="Modifier ce site" '
+                       'aria-label="Modifier %s">%s</a>' % (e(cle), e(cfg["nom"]), ICONE_MODIFIER))
         attributs = 'data-cle="%s" data-nom="%s" data-statut="%s"' % (
             e(cle), e("%s %s" % (cfg["nom"], cfg.get("propriete", ""))), _statut(es))
         lignes.append(entete_site(cfg["nom"], es, en_cours=actif == cfg["nom"], lien=lien, actions="".join(actions),
@@ -244,7 +260,8 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
         chantier = ('<div class="chantier" role="status" data-rafraichir><span class="roue"></span><p>Analyse en '
                     'cours%s. Cette page se met à jour toute seule.</p></div>' % detail)
     bouton = ('<button class="bouton" type="submit" disabled><span class="roue"></span>Analyse en cours</button>'
-              if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
+              if en_cours else '<button class="bouton" type="submit">%s<span class="libelle">Analyser maintenant</span>'
+                               '</button>' % ICONE_ANALYSER)
     # consigne masquée : le moment des analyses reste rappelé sous le titre
     rappel = "" if consigne else '<p class="sous">%s <a href="/reglages">Changer</a></p>' % e(texte_planification(planif))
     annonce = ""
@@ -275,8 +292,8 @@ def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees, analyse_du_site=None):
                 % (_jeton(jeton), e(cle), e(d["cle"])))
     ignorees = ('<p class="pied">%d adresse%s ignorée%s sur ce site.</p>'
                 % (nb_ignorees, "s" if nb_ignorees > 1 else "", "s" if nb_ignorees > 1 else "")) if nb_ignorees else ""
-    actions = (_bouton_analyser(cle, jeton, en_cours, "Analyser ce site", retour=True)
-               + '<a class="bouton secondaire" href="/modifier?cle=%s">Modifier ce site</a>' % e(cle))
+    actions = (_bouton_analyser(cle, jeton, en_cours, cfg["nom"], "Analyser ce site", retour=True)
+               + '<a class="bouton secondaire" href="/modifier?cle=%s">%sModifier ce site</a>' % (e(cle), ICONE_MODIFIER))
     corps = "%s%s%s%s" % (RETOUR, entete_site(cfg["nom"], es, analyse_du_site, niveau=1, actions=actions),
                           tableau_adresses(es, ignorer, cfg["nom"]), ignorees)
     return gabarit(cfg["nom"], corps, script=SCRIPT_TABLEAU, onglet="sites", rafraichir=3 if en_cours else None)

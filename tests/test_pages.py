@@ -135,14 +135,24 @@ def test_sites_a_traiter_en_premier():
     assert positions == sorted(positions)
 
 
-def test_un_bouton_analyser_par_site():
+def test_un_bouton_analyser_par_site_en_icone():
     html = _sans_script(pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j"))
-    for cle in SITES:
-        assert ('<input type="hidden" name="cle" value="%s"><button class="bouton secondaire" type="submit">'
-                'Analyser</button>' % cle) in html
+    for cle, cfg in SITES.items():
+        assert ('<input type="hidden" name="cle" value="%s"><button class="bouton secondaire icone" type="submit" '
+                'title="Analyser ce site" aria-label="Analyser %s">%s</button>' % (cle, cfg["nom"], pages.ICONE_ANALYSER)
+                ) in html
     pendant = _sans_script(pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j"))
-    assert '<button class="bouton secondaire" type="submit">Analyser</button>' not in pendant
-    assert '<button class="bouton secondaire" type="submit" disabled>Analyser</button>' in pendant
+    assert 'aria-label="Analyser a.fr">' not in pendant and 'aria-label="Analyser a.fr" disabled>' in pendant
+
+
+def test_modifier_en_icone_et_analyser_maintenant_avec_icone_et_texte():
+    html = _sans_script(pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j"))
+    assert ('<a class="bouton secondaire icone" href="/modifier?cle=a" title="Modifier ce site" '
+            'aria-label="Modifier a.fr">%s</a>' % pages.ICONE_MODIFIER) in html
+    assert '>Modifier</a>' not in html
+    assert ('<button class="bouton" type="submit">%s<span class="libelle">Analyser maintenant</span></button>'
+            % pages.ICONE_ANALYSER) in html
+    assert "libelle.textContent=" in pages.SCRIPT_SITES and "bouton.textContent=" not in pages.SCRIPT_SITES
 
 
 def test_recherche_et_filtres_seulement_pour_une_longue_liste():
@@ -170,7 +180,7 @@ def test_bouton_du_haut_analyse_les_sites_affiches():
 def test_page_d_un_site_analyse_ce_seul_site():
     html = pages.page_site("a", SITES["a"], ETAT["a"], False, "j", 0)
     assert ('<input type="hidden" name="cle" value="a"><input type="hidden" name="retour" value="site">'
-            '<button class="bouton secondaire" type="submit">Analyser ce site</button>') in html
+            '<button class="bouton secondaire" type="submit">%sAnalyser ce site</button>' % pages.ICONE_ANALYSER) in html
     autre = pages.page_site("a", SITES["a"], ETAT["a"], True, "j", 0, analyse_du_site=False)
     assert 'aria-label="Analyse en cours"' not in autre and "Analyser ce site</button>" in autre
-    assert 'type="submit" disabled>Analyser ce site' in autre
+    assert 'type="submit" disabled>%sAnalyser ce site' % pages.ICONE_ANALYSER in autre
