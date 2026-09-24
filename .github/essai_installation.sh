@@ -27,6 +27,8 @@ attendre_interface() {              # attendre_interface [pid à voir remplacé]
 }
 
 SYSTEME=$(uname)
+# PYTHON_ESSAI : un Python précis (celui de python.org), trouvé en premier par installer.sh
+if [ -n "${PYTHON_ESSAI:-}" ]; then PATH="$(dirname "$PYTHON_ESSAI"):$PATH"; export PATH; fi
 PYTHON=$(command -v python3)
 echo "Système : $SYSTEME, Python : $PYTHON ($($PYTHON --version 2>&1))"
 if [ "$SYSTEME" = "Darwin" ]; then
@@ -56,14 +58,28 @@ cp -R veille_ia scripts_windows installer.pyw lancer_veille.pyw icone.ico icone.
     LICENSE README.md "$TEMP/zip/bifurq-aio-essai/"
 (cd "$TEMP/zip" && "$PYTHON" -m zipfile -c "$TEMP/bifurq-aio.zip" bifurq-aio-essai)
 
+if [ "$SYSTEME" = "Darwin" ]; then
+    etape "HTTPS avec ce Python, sans l'outil"
+    if "$PYTHON" -c "import urllib.request; urllib.request.urlopen('https://pierreribeaucourt.github.io/bifurq-aio/version.json', timeout=20)" 2>/dev/null
+    then echo "::notice title=HTTPS::$PYTHON lit les certificats tout seul"
+    else echo "::notice title=HTTPS::$PYTHON sans certificats : HTTPS impossible sans l'outil"; fi
+fi
+
 etape "Installation : cat installer.sh | sh"
+DEBUT=$(date +%s)
 sortie=$(cat docs/installer.sh | BIFURQ_ZIP="file://$TEMP/bifurq-aio.zip" sh 2>&1); code=$?
+FIN=$(date +%s)
 printf '%s\n' "$sortie"
 [ $code -eq 0 ] && ok "installer.sh se termine sans erreur" || ko "installer.sh" "code $code : $sortie"
-case "$sortie" in *"Adresse de l'outil : http://127.0.0.1:"*) ok "adresse de l'outil affichée" ;;
-    *) ko "message de fin" "$sortie" ;; esac
-verifier "environnement Python" "$D/config/venv/bin/python3" -c "import veille_ia"
 verifier "interface ouverte" attendre_interface
+echo "::notice title=Délais::installation terminée en $((FIN - DEBUT)) s, interface prête après $(( $(date +%s) - DEBUT )) s"
+verifier "environnement Python" "$D/config/venv/bin/python3" -c "import veille_ia"
+case "$sortie" in *"Adresse de l'outil : http://127.0.0.1:"*) ok "adresse de l'outil affichée" ;;
+    *) ko "message de fin" "$sortie | serveur.log : $(tail -5 "$D/config/serveur.log" 2>&1)" ;; esac
+verifier "HTTPS depuis l'outil (version publiée)" "$D/config/venv/bin/python3" -c "
+from veille_ia import mise_a_jour
+etat = mise_a_jour.verifier(force=True)
+assert etat.get('version'), etat"
 verifier "page d'accueil" sh -c "curl -fs http://127.0.0.1:8765/ | grep -q '<title>Bifurq AIO</title>'"
 
 etape "Raccourci"

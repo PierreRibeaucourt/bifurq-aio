@@ -26,13 +26,25 @@ jobs:
       - run: python -m pytest -q -p no:cacheprovider
 
   installation:
-    name: Installation réelle (${{ matrix.os }})
+    name: Installation réelle (${{ matrix.os }}, Python ${{ matrix.python }})
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            python: Homebrew
+          - os: macos-latest          # celui que le site conseille, sans Install Certificates
+            python: python.org
+          - os: ubuntu-latest
+            python: système
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Python de python.org
+        if: matrix.python == 'python.org'
+        run: |
+          curl -fsSLO https://www.python.org/ftp/python/3.13.12/python-3.13.12-macos11.pkg
+          sudo installer -pkg python-3.13.12-macos11.pkg -target /
+          echo "PYTHON_ESSAI=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3" >> "$GITHUB_ENV"
       - name: Installation, interface, planification, notification, mise à jour
         run: sh .github/essai_installation.sh
