@@ -20,12 +20,14 @@ def creer_raccourci(dossier=None):
     compris un bureau déplacé dans OneDrive)."""
     racine = config.racine()
     pythonw = os.path.join(racine, "config", "venv", "Scripts", "pythonw.exe")
+    icone = os.path.join(racine, "icone.ico")
     cible = "[Environment]::GetFolderPath('Desktop')" if dossier is None else _ps(dossier)
     script = ("$d=%s;$p=Join-Path $d %s;"
               "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($p);"
               "$s.TargetPath=%s;$s.Arguments='-m veille_ia.installer.server';$s.WorkingDirectory=%s;"
-              "$s.Description=%s;$s.Save();$p"
-              % (cible, _ps(NOM + ".lnk"), _ps(pythonw), _ps(racine), _ps("Ouvre l'outil de veille des adresses inventées")))
+              "$s.Description=%s;%s$s.Save();$p"
+              % (cible, _ps(NOM + ".lnk"), _ps(pythonw), _ps(racine), _ps("Ouvre l'outil de veille des adresses inventées"),
+                 "$s.IconLocation=%s;" % _ps(icone + ",0") if os.path.isfile(icone) else ""))
     r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                        capture_output=True, text=True, timeout=60,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
