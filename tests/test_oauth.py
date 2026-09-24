@@ -1,4 +1,6 @@
+import json
 import socket
+import urllib.parse
 
 import pytest
 
@@ -24,6 +26,7 @@ def test_url_autorisation_contient_les_bons_parametres():
     assert "state=un-etat-aleatoire" in url
     assert "access_type=offline" in url
     assert "prompt=consent" in url
+    assert "select_account" in url            # choix du compte à chaque connexion
     assert "scope=" in url and "webmasters.readonly" in url
 
 
@@ -43,6 +46,28 @@ def test_enregistrer_jeton_ecrit_le_bon_schema(tmp_path):
     donnees = json.load(open(chemin, encoding="utf-8"))
     assert set(donnees) == {"client_id", "client_secret", "refresh_token", "token_uri"}
     assert donnees["refresh_token"] == "def"
+
+
+class _Reponse:
+    def __init__(self, donnees):
+        self.donnees = donnees
+
+    def read(self):
+        return json.dumps(self.donnees).encode()
+
+
+def test_nouvelle_connexion_dans_le_meme_fichier_utilise_le_nouveau_compte(tmp_path, monkeypatch):
+    """Le fichier temporaire sert à chaque connexion : la liste des sites doit venir du
+    compte qui vient de se connecter, pas du précédent resté en mémoire."""
+    monkeypatch.setattr(oauth, "_cache", {})
+    acces = {"compte-a": "acces-a", "compte-b": "acces-b"}
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: _Reponse(
+        {"access_token": acces[urllib.parse.parse_qs(req.data.decode())["refresh_token"][0]], "expires_in": 3600}))
+    chemin = str(tmp_path / "_temp_jeton.json")
+    oauth.enregistrer_jeton(chemin, {"refresh_token": "compte-a"})
+    assert oauth.jeton_frais(chemin) == "acces-a"
+    oauth.enregistrer_jeton(chemin, {"refresh_token": "compte-b"})
+    assert oauth.jeton_frais(chemin) == "acces-b"
 
 
 def test_trouver_port_libre_retombe_sur_un_port_ephemere_si_occupe():

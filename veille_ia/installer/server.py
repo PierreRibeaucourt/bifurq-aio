@@ -242,15 +242,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._rediriger("/choisir")
 
     def _reconnecter(self):
-        """Le nouveau jeton sert à tous les sites suivis que ce compte Google peut lire."""
-        _session["reconnecter"] = None
-        accessibles = {p["siteUrl"] for p in gsc_api.lister_proprietes(_chemin_temp())}
+        """Le nouveau jeton sert au site à reconnecter et à tous les autres sites suivis que
+        ce compte Google peut lire. Si ce compte n'a pas accès au site à reconnecter, rien ne
+        change : un autre compte ne doit pas remplacer en silence une connexion qui marche."""
+        cible, _session["reconnecter"] = _session["reconnecter"], None
+        sites = config.lire()["sites"]
+        accessibles = {p["siteUrl"] for p in gsc_api.lister_proprietes(_chemin_temp())
+                       if p.get("permissionLevel") != "siteUnverifiedUser"}
+        if cible in sites and sites[cible]["propriete"] not in accessibles:
+            _effacer_temp()
+            return self._repondre(pages.erreur(
+                "Mauvais compte Google", "Ce compte Google n'a pas accès à la Search Console de %s. "
+                "Reconnectez-vous avec le compte qui la gère." % sites[cible]["nom"],
+                "/connecter?site=%s" % urllib.parse.quote(cible), "Choisir un autre compte"))
         contenu = io.open(_chemin_temp(), encoding="utf-8").read()
         mis_a_jour = 0
-        for cle, cfg in config.lire()["sites"].items():
+        for cle, cfg in sites.items():
             if cfg["propriete"] in accessibles:
                 io.open(config.chemin_jeton(cle), "w", encoding="utf-8").write(contenu)
-                oauth._cache.pop(config.chemin_jeton(cle), None)
                 mis_a_jour += 1
         _effacer_temp()
         if not mis_a_jour:

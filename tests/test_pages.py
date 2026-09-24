@@ -30,6 +30,15 @@ def test_bouton_et_reglages_dans_la_barre_fixe_sous_la_liste():
     assert html.index('value="sc-domain:c.fr"') < html.index('class="barre-fixe"')
 
 
+def test_champ_de_recherche_seulement_pour_une_longue_liste_et_hors_du_formulaire():
+    beaucoup = [{"propriete": "sc-domain:s%d.fr" % i, "nom": "s%d.fr" % i} for i in range(pages.SEUIL_RECHERCHE + 1)]
+    html = pages.choisir(beaucoup, set(), False, PLANIF, "j")
+    assert html.index('type="search"') < html.index('<form class="choisir"')    # Entrée n'envoie rien
+    assert 'data-nom="s0.fr sc-domain:s0.fr"' in html
+    peu = beaucoup[:pages.SEUIL_RECHERCHE]
+    assert 'type="search"' not in pages.choisir(peu, set(), False, PLANIF, "j")
+
+
 def test_reglages_surveillance_arretee():
     html = pages.reglages(dict(PLANIF, active=False), "j")
     assert "La surveillance automatique est arrêtée." in html and "Arrêter la surveillance" not in html

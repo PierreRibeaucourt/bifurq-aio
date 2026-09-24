@@ -8,7 +8,7 @@ import urllib.parse
 
 import pytest
 
-from veille_ia import config, oauth_client, scheduler_windows, sitemap, watch
+from veille_ia import config, gsc_api, oauth, oauth_client, scheduler_windows, sitemap, watch
 from veille_ia.installer import server
 
 
@@ -154,6 +154,45 @@ def test_activer_ajoute_les_sites_puis_un_second_envoi_ramene_a_mes_sites(serveu
 def test_activer_sans_connexion_google_renvoie_vers_google(serveur):
     code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("sc-domain:c.fr"))
     assert (code, lieu) == (303, "/connecter")
+
+
+def _reconnecter(port, monkeypatch, cle, proprietes_du_compte):
+    """Reconnexion du site cle avec un compte Google qui voit proprietes_du_compte."""
+    monkeypatch.setattr(oauth, "echanger_code", lambda code, uri: {"refresh_token": "nouveau-compte"})
+    monkeypatch.setattr(gsc_api, "lister_proprietes", lambda chemin: [
+        {"siteUrl": p, "permissionLevel": "siteOwner"} for p in proprietes_du_compte])
+    monkeypatch.setattr(server, "lancer_analyse", lambda: True)
+    _requete(port, "GET", "/connecter?site=" + cle)
+    return _requete(port, "GET", "/oauth2/callback?code=c&state=" + server._session["etat_oauth"])
+
+
+def _deux_sites_connectes():
+    for cle, propriete in (("empirik-fr", "sc-domain:empirik.fr"), ("datagalaxy-com", "sc-domain:datagalaxy.com")):
+        config.ajouter_site(cle, nom=propriete.split(":")[1], propriete=propriete, sitemaps=[])
+        with open(config.chemin_jeton(cle), "w", encoding="utf-8") as f:
+            f.write('{"refresh_token": "ancien-%s"}' % cle)
+
+
+def _jeton(cle):
+    with open(config.chemin_jeton(cle), encoding="utf-8") as f:
+        return f.read()
+
+
+def test_reconnecter_avec_un_compte_sans_acces_au_site_ne_change_rien(serveur, monkeypatch):
+    _deux_sites_connectes()
+    code, corps, _ = _reconnecter(serveur, monkeypatch, "datagalaxy-com", ["sc-domain:empirik.fr"])
+    assert "Mauvais compte Google" in corps and "datagalaxy.com" in corps
+    assert "ancien-datagalaxy-com" in _jeton("datagalaxy-com")
+    assert "ancien-empirik-fr" in _jeton("empirik-fr")          # pas remplacée en silence
+    assert not os.path.exists(server._chemin_temp())
+
+
+def test_reconnecter_avec_le_bon_compte_met_a_jour_les_sites_accessibles(serveur, monkeypatch):
+    _deux_sites_connectes()
+    code, _, lieu = _reconnecter(serveur, monkeypatch, "datagalaxy-com", ["sc-domain:datagalaxy.com"])
+    assert (code, lieu) == (302, "/")
+    assert "nouveau-compte" in _jeton("datagalaxy-com")
+    assert "ancien-empirik-fr" in _jeton("empirik-fr")          # ce compte ne le voit pas
 
 
 @pytest.mark.skipif(os.name != "nt", reason="partage de port propre à Windows")
