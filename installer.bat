@@ -2,6 +2,11 @@
 setlocal
 cd /d "%~dp0"
 
+rem Retire la marque "provient d'Internet" des fichiers de l'outil, au cas ou seul
+rem installer.bat a ete debloque et pas le ZIP : sinon Windows peut restreindre les
+rem scripts PowerShell de notification et de tache planifiee.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Recurse -File | Unblock-File" >nul 2>nul
+
 set "PY="
 where py >nul 2>nul
 if not errorlevel 1 set "PY=py -3"
