@@ -51,7 +51,8 @@ rien d'autre : ni publicité, ni revente, ni profilage, ni entraînement d'un mo
 des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>
 
 <h2>Où les données sont conservées</h2>
-<p>Uniquement sur votre ordinateur, dans le dossier <code>config</code> de l'outil :</p>
+<p>Uniquement sur votre ordinateur, dans le dossier de l'outil
+(<code>%LOCALAPPDATA%\Veille adresses IA\config</code>) :</p>
 <ul>
 <li>la connexion Google de chaque site (<code>config\&lt;site&gt;\jeton_gsc.json</code>), qui permet à l'outil
 de relancer l'analyse sans vous redemander de vous connecter ;</li>
@@ -78,7 +79,7 @@ ni publicité, ni suivi.</p>
 <ul>
 <li><b>Retirer un site</b> : dans l'outil, <b>Modifier</b> puis <b>Retirer ce site</b>. Ses données locales,
 connexion Google comprise, sont effacées.</li>
-<li><b>Tout effacer</b> : supprimez le dossier de l'outil.</li>
+<li><b>Tout effacer</b> : supprimez le dossier <code>%LOCALAPPDATA%\Veille adresses IA</code>.</li>
 <li><b>Retirer l'accès côté Google</b> : sur
 <a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>, choisissez
 « Veille des adresses inventées », puis supprimez son accès. L'outil ne pourra plus rien lire tant que vous ne

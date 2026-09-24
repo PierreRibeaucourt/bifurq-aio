@@ -25,9 +25,15 @@ L'outil ne modifie rien sur votre site. Vous posez vous-même les redirections.
 1. Si Python n'est pas encore installé sur votre ordinateur : téléchargez-le sur
    [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
 2. Téléchargez ce dépôt (bouton **Code** puis **Download ZIP** sur GitHub) et décompressez-le.
-3. Double-cliquez sur **installer** (le fichier `installer.pyw`).
+3. Double-cliquez sur **installer** (le fichier `installer.pyw`). L'outil s'installe dans
+   `%LOCALAPPDATA%\Veille adresses IA`, votre dossier d'applications Windows, sans droits
+   d'administrateur.
 4. L'outil s'ouvre dans votre navigateur. Un raccourci **Veille des adresses inventées** est
    ajouté sur votre bureau pour y revenir plus tard.
+5. Vous pouvez supprimer le fichier ZIP et le dossier téléchargés : l'outil n'en a plus besoin.
+
+**Mettre à jour** : téléchargez la nouvelle version et double-cliquez sur **installer**, comme la
+première fois. Vos sites, connexions Google et réglages sont conservés.
 
 ## Première utilisation
 
@@ -54,7 +60,8 @@ L'outil ne modifie rien sur votre site. Vous posez vous-même les redirections.
 
 Quand une analyse automatique trouve une nouvelle adresse à corriger, une notification Windows
 apparaît. Un clic dessus ouvre le rapport. Le dernier rapport se trouve aussi dans
-`config\rapport.html`, et ceux des 60 derniers jours dans `config\rapports\`.
+`%LOCALAPPDATA%\Veille adresses IA\config\rapport.html`, et ceux des 60 derniers jours dans le
+dossier `rapports` à côté.
 
 ## Quelles données sortent de votre ordinateur
 
@@ -72,7 +79,8 @@ Le détail est dans les [règles de confidentialité](https://pierreribeaucourt.
 
 1. Ouvrez l'outil, puis pour chaque site : **Modifier** puis **Retirer ce site**. Quand le dernier
    site est retiré, la tâche planifiée Windows est supprimée.
-2. Supprimez le dossier téléchargé et le raccourci du bureau.
+2. Supprimez le dossier `%LOCALAPPDATA%\Veille adresses IA` (collez ce chemin dans la barre
+   d'adresse de l'Explorateur) et le raccourci du bureau.
 
 Pour retirer la tâche planifiée sans passer par l'outil : ouvrez le Planificateur de tâches
 Windows et supprimez la tâche **Veille adresses inventees IA**.
@@ -82,7 +90,8 @@ Windows et supprimez la tâche **Veille adresses inventees IA**.
 - **Windows demande avec quelle application ouvrir `installer`** : Python n'est pas installé.
   Installez-le (étape 1 de l'installation), puis double-cliquez à nouveau sur `installer`.
 - **Une fenêtre « L'installation n'a pas pu se terminer » s'affiche** : le détail est dans
-  `config\installation.log`, à joindre si vous signalez le problème.
+  `%LOCALAPPDATA%\Veille adresses IA\config\installation.log`, à joindre si vous signalez le
+  problème.
 - **Aucun site trouvé après la connexion** : le compte Google choisi n'a pas accès à la Search
   Console du site. Ajoutez-le comme utilisateur sur
   [search.google.com/search-console](https://search.google.com/search-console), puis
