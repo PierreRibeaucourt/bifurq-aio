@@ -365,6 +365,30 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
 
 
 # --- tous les sites ----------------------------------------------------------------------------
+def _nouvelles_du_site(r):
+    """(fichier des adresses déjà signalées, adresses déjà signalées, nouvelles adresses) :
+    nouvelle = jamais signalée, ou signalée puis résolue et de nouveau en 404."""
+    p = os.path.join(config.dossier_site(r["site"]), "veille_deja_alertees.json")
+    deja = {urls.cle_chemin(x) for x in _lire_json(p, [])}
+    deja -= set(r["resolues"])
+    return p, deja, {d["cle"] for d in r["a_rediriger"]} - deja
+
+
+def _etat_du_site(r, nouvelles, ancien, maintenant):
+    statut = "a_corriger" if r["a_rediriger"] else ("incomplet" if r["anomalies"] else "ok")
+    return {"date": maintenant, "statut": statut, "fin_gsc": r["fin_gsc"],
+            "a_rediriger": r["a_rediriger"], "anomalies": r["anomalies"], "infos": r["infos"],
+            "nouvelles": sorted(nouvelles), "probleme_notifie": ancien.get("probleme_notifie")}
+
+
+def _publier_etat_du_site(cle, entree):
+    """Écrit l'état d'un site dès la fin de son analyse : l'interface, rechargée toutes les
+    3 secondes pendant une analyse, l'affiche sans attendre la fin des sites suivants."""
+    etat = lire_etat()
+    etat[cle] = entree
+    _ecrire_json(chemin_etat(), etat)
+
+
 def executer(test=False, interactif=False):
     """Une analyse complète de tous les sites. interactif=True : lancée depuis
     l'interface, que l'utilisateur regarde ; pas de notification Windows, les
@@ -388,7 +412,7 @@ def _executer(test, interactif):
         journal("aucun site configuré : rien à faire")
         return {"resultats": [], "echecs": {}, "reportes": [], "nouvelles": {}, "notifiee": False, "rapport": None}
 
-    resultats, echecs, reportes = [], {}, []
+    resultats, echecs, reportes, entrees, suivis = [], {}, [], {}, {}
     for cle, cfg in sites.items():
         if time.time() - t0 > DUREE_MAX:
             reportes.append(cle)
@@ -403,37 +427,24 @@ def _executer(test, interactif):
             journal("%-16s GSC au %s | %d à corriger%s" % (
                 cfg["nom"], r["fin_gsc"], len(r["a_rediriger"]),
                 (" | " + " ; ".join(r["anomalies"])) if r["anomalies"] else ""))
+            suivis[cle] = _nouvelles_du_site(r)
+            entrees[cle] = _etat_du_site(r, suivis[cle][2], lire_etat().get(cle, {}), maintenant)
         except Exception as ex:
             message, action = expliquer(ex)
             echecs[cle] = {"message": message, "action": action}
             journal("%-16s PROBLÈME : %s%s" % (cfg.get("nom", cle), message,
                                               (" | " + ex.detail) if getattr(ex, "detail", "") else ""))
             journal(traceback.format_exc())
+            entrees[cle] = dict(lire_etat().get(cle, {}), date=maintenant, statut="probleme",
+                                message=message, action=action)
+        if not test:
+            _publier_etat_du_site(cle, entrees[cle])
 
-    # nouvelles adresses : jamais signalées, ou signalées puis résolues et de nouveau en 404
-    nouvelles, suivis = {}, {}
-    for r in resultats:
-        p = os.path.join(config.dossier_site(r["site"]), "veille_deja_alertees.json")
-        deja = {urls.cle_chemin(x) for x in _lire_json(p, [])}
-        deja -= set(r["resolues"])
-        n = {d["cle"] for d in r["a_rediriger"]} - deja
-        suivis[r["site"]] = (p, deja, n)
-        if n:
-            nouvelles[r["site"]] = n
+    nouvelles = {site: n for site, (_, _, n) in suivis.items() if n}
 
-    # état de chaque site pour l'interface et le rapport
-    etat = lire_etat()
-    etat = {k: v for k, v in etat.items() if k in sites}
-    for r in resultats:
-        statut = "a_corriger" if r["a_rediriger"] else ("incomplet" if r["anomalies"] else "ok")
-        ancien = etat.get(r["site"], {})
-        etat[r["site"]] = {"date": maintenant, "statut": statut, "fin_gsc": r["fin_gsc"],
-                           "a_rediriger": r["a_rediriger"], "anomalies": r["anomalies"], "infos": r["infos"],
-                           "nouvelles": sorted(nouvelles.get(r["site"], ())),
-                           "probleme_notifie": ancien.get("probleme_notifie")}
-    for cle, e in echecs.items():
-        ancien = etat.get(cle, {})
-        etat[cle] = dict(ancien, date=maintenant, statut="probleme", message=e["message"], action=e["action"])
+    # état de chaque site pour le rapport et les notifications
+    etat = {k: v for k, v in lire_etat().items() if k in sites}
+    etat.update(entrees)
     for cle in reportes:
         etat.setdefault(cle, {})["statut_passage"] = "reporte"
 
