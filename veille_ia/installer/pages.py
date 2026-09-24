@@ -183,17 +183,43 @@ votre site, ou ajoutez d'abord ce compte comme utilisateur dans la Search Consol
                      '<span class="choix-texte"><b>%s</b>%s</span></label>'
                      % (" inactif" if deja else "", e(p["propriete"]), " checked disabled" if deja else "",
                         e(p["nom"]), '<span class="meta">Déjà surveillé</span>' if deja else ""))
-    quand = ('<h2 class="section-titre">Quand vérifier ?</h2>%s' % _choix_planification(planif)) if premiere_fois else ""
+    quand = ""
+    if premiere_fois:
+        quand = ('<fieldset class="quand"><legend>Quand vérifier ?</legend><div class="quand-choix">%s</div></fieldset>'
+                 % _choix_planification(planif))
     bloc_erreur = '<div class="encadre probleme"><p>%s</p></div>' % e(erreur) if erreur else ""
+    # Réglages et bouton dans une barre collée en bas de l'écran : avec beaucoup de
+    # propriétés Search Console, ils restent à portée sans faire défiler toute la liste.
     corps = """<div class="etroit"><h1>Quel site voulez-vous surveiller ?</h1>
 <p class="sous">Voici les sites auxquels ce compte Google a accès dans la Search Console.</p>%s
-<form method="post" action="/activer">%s
-<div>%s</div>%s
-%s
-<div class="actions bloc-actions"><button class="bouton grand" type="submit">Lancer la surveillance</button></div>
+<form class="choisir" method="post" action="/activer">%s
+<div>%s</div>
+<div class="barre-fixe">%s
+<div class="barre-bas">%s
+<div class="barre-action"><span class="compteur" aria-live="polite"></span>
+<button class="bouton grand" type="submit">Lancer la surveillance</button></div></div>
+</div>
 </form></div>""" % (bloc_erreur, _jeton(jeton), "".join(cases), quand,
                     _reglages_avances(_champ_seuil(15) + _champs_dataforseo()))
-    return gabarit("Choisir un site", corps, onglet="sites")
+    return gabarit("Choisir un site", corps, onglet="sites", script=SCRIPT_CHOISIR)
+
+
+# Compte les sites cochés, et empêche un second envoi pendant l'activation (qui lit le plan
+# de site de chaque site choisi) : un double clic renverrait vers la connexion Google.
+SCRIPT_CHOISIR = """(function(){
+var f=document.querySelector('form.choisir');if(!f)return;
+var n=f.querySelector('.compteur'),b=f.querySelector('.barre-action button');
+function maj(){var k=f.querySelectorAll('input[name=proprietes]:checked:not(:disabled)').length;
+n.textContent=k===0?'Aucun site coché':k===1?'1 site coché':k+' sites cochés';}
+f.addEventListener('change',maj);maj();
+f.addEventListener('submit',function(ev){
+if(f.getAttribute('data-envoye')){ev.preventDefault();return;}
+f.setAttribute('data-envoye','1');b.disabled=true;
+b.innerHTML='<span class="roue" aria-hidden="true"></span>Lancement en cours';
+n.textContent='Cela peut prendre une minute.';});
+window.addEventListener('pageshow',function(ev){if(!ev.persisted)return;
+f.removeAttribute('data-envoye');b.disabled=false;b.textContent='Lancer la surveillance';maj();});
+})();"""
 
 
 def reglages(planif, jeton, message=None, erreur=None):

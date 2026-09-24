@@ -2,12 +2,13 @@
 routes qui ne demandent pas de vrai compte Google."""
 import http.client
 import http.server
+import os
 import threading
 import urllib.parse
 
 import pytest
 
-from veille_ia import config, oauth_client, watch
+from veille_ia import config, oauth_client, scheduler_windows, sitemap, watch
 from veille_ia.installer import server
 
 
@@ -122,6 +123,49 @@ def test_modifier_refuse_un_seuil_invalide(serveur):
         "jeton": server._session["jeton_formulaire"]})
     assert code == 200 and "nombre entier" in corps
     assert config.lire()["sites"]["exemple"]["seuil_impressions"] == 15
+
+
+def _formulaire_activer(*proprietes):
+    return [("proprietes", p) for p in proprietes] + [("au_demarrage", "on"), ("seuil", "15"),
+                                                        ("jeton", server._session["jeton_formulaire"])]
+
+
+def test_activer_ajoute_les_sites_puis_un_second_envoi_ramene_a_mes_sites(serveur, monkeypatch):
+    monkeypatch.setattr(sitemap, "deviner_sitemaps",
+                        lambda racine: [racine + "sitemap_index.xml"] if "a.fr" in racine else [])
+    monkeypatch.setattr(scheduler_windows, "installer", lambda *args: None)
+    monkeypatch.setattr(server, "lancer_analyse", lambda: True)
+    os.makedirs(config.dossier_config(), exist_ok=True)
+    with open(server._chemin_temp(), "w", encoding="utf-8") as f:
+        f.write('{"refresh_token": "r"}')
+    monkeypatch.setitem(server._session, "jeton_temp", server._chemin_temp())
+
+    code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("https://a.fr/", "sc-domain:b.fr"))
+    assert (code, lieu) == (303, "/")
+    sites = {cfg["propriete"]: cfg for cfg in config.lire()["sites"].values()}
+    assert sites["https://a.fr/"]["sitemaps"] == ["https://a.fr/sitemap_index.xml"]
+    assert sites["sc-domain:b.fr"]["sitemaps"] == ["https://b.fr/sitemap.xml"]      # rien trouvé : repli
+
+    # double clic : le second envoi arrive une fois la connexion temporaire consommée
+    code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("https://a.fr/", "sc-domain:b.fr"))
+    assert (code, lieu) == (303, "/")
+
+
+def test_activer_sans_connexion_google_renvoie_vers_google(serveur):
+    code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("sc-domain:c.fr"))
+    assert (code, lieu) == (303, "/connecter")
+
+
+@pytest.mark.skipif(os.name != "nt", reason="partage de port propre à Windows")
+def test_une_autre_copie_de_l_outil_ne_prend_pas_le_meme_port():
+    premiere = server.Serveur(("127.0.0.1", 0), server.Handler)
+    try:
+        with pytest.raises(OSError):
+            server.Serveur(("127.0.0.1", premiere.server_port), server.Handler)
+        with pytest.raises(OSError):                     # une ancienne version non plus
+            http.server.ThreadingHTTPServer(("127.0.0.1", premiere.server_port), server.Handler)
+    finally:
+        premiere.server_close()
 
 
 def test_page_inconnue_404(serveur):

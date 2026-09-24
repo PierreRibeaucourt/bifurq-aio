@@ -20,6 +20,7 @@ import json
 import os
 import re
 import secrets
+import socket
 import sys
 import threading
 import time
@@ -27,6 +28,7 @@ import traceback
 import urllib.parse
 import urllib.request
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 
 from .. import config, gsc_api, oauth, scheduler_windows, sitemap, watch
 from ..erreurs import expliquer
@@ -278,12 +280,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # --- actions ---
     def _activer(self, champs):
-        if not _session.get("jeton_temp") or not os.path.exists(_chemin_temp()):
-            return self._rediriger("/connecter", 303)
         donnees = config.lire()
-        premiere_fois = not donnees["sites"]
         choisies = [p for p in champs.get("proprietes") or []
                     if p not in {cfg["propriete"] for cfg in donnees["sites"].values()}]
+        if not _session.get("jeton_temp") or not os.path.exists(_chemin_temp()):
+            # formulaire envoyé une seconde fois (double clic pendant l'activation) : les sites
+            # sont déjà ajoutés, retour à la liste plutôt qu'une nouvelle connexion Google
+            if donnees["sites"] and not choisies:
+                return self._rediriger("/", 303)
+            return self._rediriger("/connecter", 303)
+        premiere_fois = not donnees["sites"]
         if not choisies:
             return self._choisir("Cochez au moins un site.")
         au_demarrage = "au_demarrage" in champs
@@ -299,10 +305,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         dataforseo = {"login": login, "password": motdepasse} if login and motdepasse else None
 
         contenu = io.open(_chemin_temp(), encoding="utf-8").read()
-        for propriete in choisies:
+        racines = [_racine_http(p) for p in choisies]
+        with ThreadPoolExecutor(max_workers=min(8, len(racines))) as pool:   # un site lent ne retarde pas les autres
+            plans = list(pool.map(sitemap.deviner_sitemaps, racines))
+        for propriete, racine, trouves in zip(choisies, racines, plans):
             cle = _cle_depuis_propriete(propriete, config.lire()["sites"])
-            racine = _racine_http(propriete)
-            sitemaps = sitemap.deviner_sitemaps(racine) or [racine.rstrip("/") + "/sitemap.xml"]
+            sitemaps = trouves or [racine.rstrip("/") + "/sitemap.xml"]
             config.ajouter_site(cle, nom=_nom_lisible(propriete), propriete=propriete, sitemaps=sitemaps,
                                 seuil_impressions=seuil, dataforseo=dataforseo)
             io.open(config.chemin_jeton(cle), "w", encoding="utf-8").write(contenu)
@@ -378,6 +386,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 # --- démarrage -----------------------------------------------------------------------------------
+class Serveur(http.server.ThreadingHTTPServer):
+    """Port réservé à cette seule copie de l'outil. Sous Windows, SO_REUSEADDR (posé par
+    défaut par http.server) laisse une seconde copie, installée dans un autre dossier, se
+    lier au même port : le navigateur parle alors à l'une ou à l'autre au hasard, et la
+    connexion Google, gardée en mémoire par l'une, manque à l'autre."""
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def _fichier_instance():
     return os.path.join(config.dossier_config(), "serveur.json")
 
@@ -423,9 +444,9 @@ def demarrer(port_prefere=PORT_PREFERE, ouvrir_navigateur=True):
         print("ancienne version ouverte (%s) : remplacée" % (empreinte or "sans empreinte"), flush=True)
         _remplacer_instance(port, pid)
     try:
-        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port_prefere), Handler)
-    except OSError:
-        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        httpd = Serveur(("127.0.0.1", port_prefere), Handler)
+    except OSError:                          # port pris, par exemple par une autre copie de l'outil
+        httpd = Serveur(("127.0.0.1", 0), Handler)
     url = "http://127.0.0.1:%d/" % httpd.server_port
     io.open(_fichier_instance(), "w", encoding="utf-8").write(json.dumps({"port": httpd.server_port, "pid": os.getpid()}))
 

@@ -23,6 +23,13 @@ def test_site_deja_suivi_grise_dans_le_choix():
     assert 'class="choix inactif"' in html and "Déjà surveillé" in html
 
 
+def test_bouton_et_reglages_dans_la_barre_fixe_sous_la_liste():
+    html = pages.choisir([{"propriete": "sc-domain:c.fr", "nom": "c.fr"}], set(), True, PLANIF, "j")
+    barre = html[html.index('class="barre-fixe"'):]
+    assert "Lancer la surveillance" in barre and 'name="au_demarrage"' in barre and "Réglages avancés" in barre
+    assert html.index('value="sc-domain:c.fr"') < html.index('class="barre-fixe"')
+
+
 def test_reglages_surveillance_arretee():
     html = pages.reglages(dict(PLANIF, active=False), "j")
     assert "La surveillance automatique est arrêtée." in html and "Arrêter la surveillance" not in html

@@ -199,6 +199,23 @@ details.avance[open]>summary::before{transform:rotate(45deg)}
 details.avance>summary .aide{font-weight:400;font-size:13px;color:var(--doux)}
 .avance-contenu{padding:18px 16px 20px;border-top:1px solid var(--trait)}
 
+/* choix des sites : réglages et bouton collés en bas de l'écran, même avec une longue liste */
+.barre-fixe{position:sticky;bottom:0;z-index:3;margin-top:18px;padding:14px 18px;background:var(--surface);
+  border:1px solid var(--trait);border-top:4px solid var(--noir);border-radius:4px 4px 0 0;
+  box-shadow:0 -14px 30px -18px rgba(18,20,23,.45)}
+fieldset.quand{margin:0 0 12px;padding:0;border:0;min-width:0}
+fieldset.quand legend{padding:0;margin-bottom:8px;font:700 13px/1 var(--titre);font-stretch:87.5%;
+  text-transform:uppercase;letter-spacing:.07em}
+.quand-choix{display:flex;flex-wrap:wrap;gap:8px}
+.quand-choix label.choix{margin-top:0;padding:8px 12px;gap:10px}
+.quand-choix .meta{display:none}
+.barre-bas{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.barre-fixe details.avance{margin-top:0;flex:1 1 240px}
+.barre-fixe details.avance>summary{padding:12px 14px}
+.barre-fixe .avance-contenu{max-height:38vh;overflow:auto}
+.barre-action{display:flex;align-items:center;gap:14px;margin-left:auto}
+.compteur{font-size:14px;color:var(--doux);white-space:nowrap}
+
 /* accueil */
 .accueil{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:40px;align-items:center;
   padding:26px 0 8px}
@@ -236,6 +253,8 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
   .site{grid-template-columns:auto minmax(0,1fr)}
   .site-actions{grid-column:1/-1;justify-content:flex-start}
   .panneau{width:64px;height:64px}.panneau .n{font-size:28px}
+  .barre-fixe{padding:12px 14px}
+  .barre-action{width:100%;flex-wrap:wrap}.barre-action .bouton{flex:1 1 auto}
 }
 """
 

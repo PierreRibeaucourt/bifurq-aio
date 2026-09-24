@@ -14,9 +14,9 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 DELAI_COURTOISIE = 1.5
 
 
-def lire_url(url):
+def lire_url(url, timeout=60):
     time.sleep(DELAI_COURTOISIE)
-    r = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60)
+    r = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout)
     brut = r.read()
     if url.endswith(".gz") or brut[:2] == b"\x1f\x8b":
         brut = gzip.decompress(brut)
@@ -58,17 +58,18 @@ def plan_de_site(racines, journal, strict=False):
     return pages
 
 
-def deviner_sitemaps(racine_site):
+def deviner_sitemaps(racine_site, timeout=15):
     """Essaie /sitemap.xml, puis lit robots.txt pour une ligne Sitemap: en repli.
-    racine_site : ex. "https://www.exemple.fr". Rend une liste (peut être vide)."""
+    racine_site : ex. "https://www.exemple.fr". Rend une liste (peut être vide).
+    Délai court : l'utilisateur attend la réponse devant l'écran de choix des sites."""
     candidat = racine_site.rstrip("/") + "/sitemap.xml"
     try:
-        lire_url(candidat)
+        lire_url(candidat, timeout)
         return [candidat]
     except Exception:
         pass
     try:
-        robots = lire_url(racine_site.rstrip("/") + "/robots.txt")
+        robots = lire_url(racine_site.rstrip("/") + "/robots.txt", timeout)
     except Exception:
         return []
     trouves = [l.split(":", 1)[1].strip() for l in robots.splitlines()
