@@ -12,8 +12,12 @@ def test_seul_le_site_analyse_affiche_en_cours():
     assert "b.fr, lecture du plan de site" in html
 
 
+def _sans_script(html):
+    return html[:html.index("<script>")]
+
+
 def test_analyse_en_cours_bouton_desactive():
-    html = pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j")
+    html = _sans_script(pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j"))
     assert "disabled" in html and "Analyser maintenant" not in html
 
 
@@ -71,7 +75,7 @@ def test_aucun_guillemet_francais_ni_tiret_cadratin():
 
 
 def test_auteur_en_bas_de_mes_sites():
-    html = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
+    html = _sans_script(pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j"))
     assert html.rindex("carte-site") < html.index('class="auteur"')          # après les sites
     assert 'href="https://www.linkedin.com/in/pierre-ribeaucourt/" target="_blank" rel="noopener"' in html
 
@@ -109,3 +113,64 @@ def test_page_d_attente_recharge_la_nouvelle_version():
     assert 'id="lent" hidden' in html
     for interdit in ("«", "»", "—", "–"):
         assert interdit not in html
+
+
+# --- Mes sites : tri, analyse d'un site, recherche et filtres ---
+def _adresses(n):
+    return [{"cle": "x%d" % i, "chemin": "/x%d" % i, "adresse": "https://s.fr/x%d" % i, "impressions": 20,
+             "impressions_7j": 2, "cible_url": "", "cible_proposee": "", "sure": False, "ressemblance": 0.2}
+            for i in range(n)]
+
+
+def _sites(*noms):
+    return {n: {"nom": n + ".fr", "propriete": "sc-domain:%s.fr" % n} for n in noms}
+
+
+def test_sites_a_traiter_en_premier():
+    etat = {"zen": {"statut": "ok"}, "peu": {"statut": "a_corriger", "a_rediriger": _adresses(1)},
+            "panne": {"statut": "probleme", "message": "x"}, "neuf": {},
+            "beaucoup": {"statut": "a_corriger", "a_rediriger": _adresses(5)}, "partiel": {"statut": "incomplet"}}
+    html = _sans_script(pages.tableau_de_bord(_sites(*etat), etat, False, None, PLANIF, "j"))
+    positions = [html.index('data-cle="%s"' % c) for c in ("panne", "beaucoup", "peu", "partiel", "neuf", "zen")]
+    assert positions == sorted(positions)
+
+
+def test_un_bouton_analyser_par_site():
+    html = _sans_script(pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j"))
+    for cle in SITES:
+        assert ('<input type="hidden" name="cle" value="%s"><button class="bouton secondaire" type="submit">'
+                'Analyser</button>' % cle) in html
+    pendant = _sans_script(pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j"))
+    assert '<button class="bouton secondaire" type="submit">Analyser</button>' not in pendant
+    assert '<button class="bouton secondaire" type="submit" disabled>Analyser</button>' in pendant
+
+
+def test_recherche_et_filtres_seulement_pour_une_longue_liste():
+    peu = _sites(*("s%d" % i for i in range(pages.SEUIL_RECHERCHE)))
+    assert 'id="recherche-sites"' not in pages.tableau_de_bord(peu, {}, False, None, PLANIF, "j")
+    noms = ["s%d" % i for i in range(pages.SEUIL_RECHERCHE + 1)]
+    etat = {noms[0]: {"statut": "probleme"}, noms[1]: {"statut": "ok"}, noms[2]: {"statut": "ok"}}
+    html = _sans_script(pages.tableau_de_bord(_sites(*noms), etat, False, None, PLANIF, "j"))
+    assert 'id="recherche-sites"' in html
+    assert 'data-statut="" aria-pressed="true">Tous <b>%d</b>' % len(noms) in html
+    assert 'data-statut="probleme" aria-pressed="false">Problème <b>1</b>' in html
+    assert 'data-statut="ok" aria-pressed="false">Tout va bien <b>2</b>' in html
+    assert 'data-statut="aucun" aria-pressed="false">À venir <b>%d</b>' % (len(noms) - 3) in html
+    assert 'data-statut="a_corriger"' not in html.split('class="filtres"')[1].split("</div>")[0]
+
+
+def test_bouton_du_haut_analyse_les_sites_affiches():
+    html = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
+    assert '<form class="enligne analyser-sites" method="post" action="/analyser">' in html
+    assert "'Analyser les '+vus.length+' sites affichés'" in html
+    pendant = pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j")
+    assert 'action="/analyser" data-en-cours>' in pendant and "data-rafraichir" in pendant
+
+
+def test_page_d_un_site_analyse_ce_seul_site():
+    html = pages.page_site("a", SITES["a"], ETAT["a"], False, "j", 0)
+    assert ('<input type="hidden" name="cle" value="a"><input type="hidden" name="retour" value="site">'
+            '<button class="bouton secondaire" type="submit">Analyser ce site</button>') in html
+    autre = pages.page_site("a", SITES["a"], ETAT["a"], True, "j", 0, analyse_du_site=False)
+    assert 'aria-label="Analyse en cours"' not in autre and "Analyser ce site</button>" in autre
+    assert 'type="submit" disabled>Analyser ce site' in autre

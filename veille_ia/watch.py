@@ -401,19 +401,20 @@ def _publier_etat_du_site(cle, entree):
     _ecrire_json(chemin_etat(), etat)
 
 
-def executer(test=False, interactif=False):
-    """Une analyse complète de tous les sites. interactif=True : lancée depuis
-    l'interface, que l'utilisateur regarde ; pas de notification Windows, les
-    adresses affichées comptent comme vues. Rend un résumé, ou {"deja_en_cours": True}."""
+def executer(test=False, interactif=False, cles=None):
+    """Une analyse de tous les sites, ou des seuls sites de cles (bouton Analyser d'un
+    site, ou des sites affichés dans l'interface). interactif=True : lancée depuis
+    l'interface, que l'utilisateur regarde ; pas de notification Windows, les adresses
+    affichées comptent comme vues. Rend un résumé, ou {"deja_en_cours": True}."""
     if not _prendre_verrou():
         return {"deja_en_cours": True}
     try:
-        return _executer(test, interactif)
+        return _executer(test, interactif, cles)
     finally:
         _rendre_verrou()
 
 
-def _executer(test, interactif):
+def _executer(test, interactif, cles=None):
     t0 = time.time()
     aujourd_hui = datetime.date.today().isoformat()
     maintenant = datetime.datetime.now().isoformat(timespec="minutes")
@@ -426,6 +427,8 @@ def _executer(test, interactif):
 
     resultats, echecs, reportes, entrees, suivis = [], {}, [], {}, {}
     for cle, cfg in sites.items():
+        if cles is not None and cle not in cles:
+            continue
         if time.time() - t0 > DUREE_MAX:
             reportes.append(cle)
             continue
@@ -505,8 +508,13 @@ def _executer(test, interactif):
         _ecrire_json(os.path.join(D, "derniere_execution.json"),
                      {"date": maintenant, "sites_ok": [r["site"] for r in resultats], "echecs": echecs,
                       "reportes": reportes, "notification_envoyee": envoyee})
-        _ecrire_json(os.path.join(D, "veille_%s.json" % aujourd_hui),
-                     {"date": aujourd_hui, "resultats": resultats, "echecs": echecs, "reportes": reportes})
+        chemin_jour = os.path.join(D, "veille_%s.json" % aujourd_hui)
+        jour = {"date": aujourd_hui, "resultats": resultats, "echecs": echecs, "reportes": reportes}
+        if cles is not None:                  # quelques sites : les autres résultats du jour restent
+            ancien = _lire_json(chemin_jour, {})
+            jour["resultats"] = [r for r in ancien.get("resultats", []) if r.get("site") not in cles] + resultats
+            jour["echecs"] = dict({k: v for k, v in ancien.get("echecs", {}).items() if k not in cles}, **echecs)
+        _ecrire_json(chemin_jour, jour)
         anciens = sorted(f for f in os.listdir(D) if re.match(r"veille_\d{4}-\d\d-\d\d\.json$", f))[:-60]
         for f in anciens:
             os.remove(os.path.join(D, f))

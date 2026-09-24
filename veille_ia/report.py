@@ -145,11 +145,14 @@ def resume(etat_site, details=True):
     return "".join(blocs)
 
 
-def entete_site(nom, etat_site, en_cours=False, niveau=2, lien=None, actions="", details=True, classe=""):
-    """Panneau, nom du site, résumé et boutons, sur une ligne."""
+def entete_site(nom, etat_site, en_cours=False, niveau=2, lien=None, actions="", details=True, classe="",
+                attributs=""):
+    """Panneau, nom du site, résumé et boutons, sur une ligne. attributs : ajoutés à la
+    balise du site (données de la recherche et des filtres de Mes sites)."""
     titre = '<a href="%s">%s</a>' % (e(lien), e(nom)) if lien else e(nom)
-    return ('<div class="site %s">%s<div class="site-texte"><h%d>%s</h%d>%s</div>%s</div>'
-            % (classe, panneau(etat_site, en_cours), niveau, titre, niveau, resume(etat_site, details),
+    return ('<div class="site %s"%s>%s<div class="site-texte"><h%d>%s</h%d>%s</div>%s</div>'
+            % (classe, " " + attributs if attributs else "", panneau(etat_site, en_cours), niveau, titre, niveau,
+               resume(etat_site, details),
                '<div class="site-actions">%s</div>' % actions if actions else ""))
 
 

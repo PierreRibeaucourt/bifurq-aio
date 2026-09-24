@@ -142,10 +142,83 @@ def _bandeau_mise_a_jour(maj, en_cours, jeton):
             % (e(maj["version"]), e(NOM_OUTIL), nouveautes, _jeton(jeton), bouton))
 
 
+# Mes sites : les sites à traiter d'abord, puis ceux qui vont bien
+ORDRE_STATUTS = ("probleme", "a_corriger", "incomplet", "aucun", "ok")
+LIBELLES_STATUTS = {"probleme": "Problème", "a_corriger": "À corriger", "incomplet": "Incomplet",
+                    "aucun": "À venir", "ok": "Tout va bien"}
+
+
+def _statut(es):
+    s = es.get("statut")
+    return s if s in LIBELLES_STATUTS else "aucun"
+
+
+def _ordre(cle, cfg, es):
+    return (ORDRE_STATUTS.index(_statut(es)), -len(es.get("a_rediriger") or []), cfg["nom"].lower(), cle)
+
+
+def _bouton_analyser(cle, jeton, en_cours, texte="Analyser", retour=False):
+    """Analyse de ce seul site."""
+    return ('<form class="enligne" method="post" action="/analyser">%s<input type="hidden" name="cle" value="%s">%s'
+            '<button class="bouton secondaire" type="submit"%s>%s</button></form>'
+            % (_jeton(jeton), e(cle), '<input type="hidden" name="retour" value="site">' if retour else "",
+               " disabled" if en_cours else "", texte))
+
+
+def _outils_sites(sites, etat):
+    """Recherche et compteurs par état, discrets, seulement pour une longue liste."""
+    if len(sites) <= SEUIL_RECHERCHE:
+        return ""
+    compte = {}
+    for cle in sites:
+        s = _statut(etat.get(cle) or {})
+        compte[s] = compte.get(s, 0) + 1
+    filtres = ['<button type="button" class="filtre" data-statut="" aria-pressed="true">Tous <b>%d</b></button>'
+               % len(sites)]
+    filtres += ['<button type="button" class="filtre" data-statut="%s" aria-pressed="false">%s <b>%d</b></button>'
+                % (s, LIBELLES_STATUTS[s], compte[s]) for s in ORDRE_STATUTS if compte.get(s)]
+    return ('<div class="outils-sites"><label class="sr" for="recherche-sites">Rechercher un site</label>'
+            '<input type="search" id="recherche-sites" placeholder="Rechercher un site" autocomplete="off">'
+            '<div class="filtres" role="group" aria-label="Afficher les sites selon leur état">%s</div></div>'
+            '<p class="meta" id="sites-vide" hidden>Aucun site ne correspond.</p>' % "".join(filtres))
+
+
+SCRIPT_SITES = r"""(function(){
+var cartes=[].slice.call(document.querySelectorAll('.carte-site[data-cle]'));
+var q=document.getElementById('recherche-sites'),vide=document.getElementById('sites-vide');
+var filtres=[].slice.call(document.querySelectorAll('.filtre[data-statut]'));
+var form=document.querySelector('form.analyser-sites');
+var cles=form&&form.querySelector('.cles'),bouton=form&&form.querySelector('button');
+var libre=form&&!form.hasAttribute('data-en-cours'),statut='',MEMOIRE='bifurq-filtre-sites';
+function plat(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function lire(){try{var v=JSON.parse(sessionStorage.getItem(MEMOIRE)||'{}');if(q&&v.q)q.value=v.q;statut=v.statut||'';}catch(e){}}
+function garder(){try{sessionStorage.setItem(MEMOIRE,JSON.stringify({q:q?q.value:'',statut:statut}));}catch(e){}}
+function appliquer(){
+var t=q?plat(q.value.trim()):'',vus=[];
+cartes.forEach(function(c){var ok=(!t||plat(c.getAttribute('data-nom')).indexOf(t)>-1)&&(!statut||c.getAttribute('data-statut')===statut);
+c.hidden=!ok;if(ok)vus.push(c.getAttribute('data-cle'));});
+filtres.forEach(function(f){f.setAttribute('aria-pressed',f.getAttribute('data-statut')===statut?'true':'false');});
+if(vide)vide.hidden=vus.length>0;
+if(libre){cles.innerHTML='';
+if(t||statut){vus.forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name='cle';i.value=k;cles.appendChild(i);});
+bouton.textContent=vus.length===1?'Analyser le site affiché':'Analyser les '+vus.length+' sites affichés';bouton.disabled=vus.length===0;}
+else{bouton.textContent='Analyser maintenant';bouton.disabled=false;}}
+garder();}
+if(q){q.addEventListener('input',appliquer);
+q.addEventListener('keydown',function(ev){if(ev.key==='Escape'){q.value='';appliquer();}});}
+filtres.forEach(function(f){f.addEventListener('click',function(){var s=f.getAttribute('data-statut');statut=s===statut?'':s;appliquer();});});
+lire();
+if(!filtres.some(function(f){return f.getAttribute('data-statut')===statut;}))statut='';
+appliquer();
+if(document.querySelector('[data-rafraichir]')){(function boucle(){setTimeout(function(){
+if(q&&document.activeElement===q)boucle();else location.reload();},3000);})();}
+})();"""
+
+
 def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True, maj=None, a_jour=False):
     actif = (progression or {}).get("site") if en_cours else None
     lignes = []
-    for cle, cfg in sites.items():
+    for cle, cfg in sorted(sites.items(), key=lambda kv: _ordre(kv[0], kv[1], etat.get(kv[0]) or {})):
         es = etat.get(cle) or {}
         lien = "/site?cle=%s" % e(cle)
         actions = []
@@ -156,16 +229,20 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
             actions.append('<a class="bouton%s" href="%s">Voir les adresses</a>' % (" secondaire" if reconnecter else "", lien))
         elif es.get("statut"):
             actions.append('<a class="bouton secondaire" href="%s">Voir le détail</a>' % lien)
+        actions.append(_bouton_analyser(cle, jeton, en_cours))
         actions.append('<a class="bouton secondaire" href="/modifier?cle=%s">Modifier</a>' % e(cle))
+        attributs = 'data-cle="%s" data-nom="%s" data-statut="%s"' % (
+            e(cle), e("%s %s" % (cfg["nom"], cfg.get("propriete", ""))), _statut(es))
         lignes.append(entete_site(cfg["nom"], es, en_cours=actif == cfg["nom"], lien=lien, actions="".join(actions),
-                                  details=False, classe="carte-site"))
+                                  details=False, classe="carte-site", attributs=attributs))
     chantier = ""
     if en_cours:
         detail = ""
         if progression:
             detail = " : %s, %s" % (e(progression.get("site", "")), e(_minuscule(progression.get("etape", ""))))
-        chantier = ('<div class="chantier" role="status"><span class="roue"></span><p>Analyse en cours%s. '
-                    'Cette page se met à jour toute seule.</p></div>' % detail)
+        # rechargée par SCRIPT_SITES, qui attend si l'on tape dans la recherche
+        chantier = ('<div class="chantier" role="status" data-rafraichir><span class="roue"></span><p>Analyse en '
+                    'cours%s. Cette page se met à jour toute seule.</p></div>' % detail)
     bouton = ('<button class="bouton" type="submit" disabled><span class="roue"></span>Analyse en cours</button>'
               if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
     # consigne masquée : le moment des analyses reste rappelé sous le titre
@@ -176,25 +253,33 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
                    % (e(NOM_OUTIL), e(__version__)))
     elif maj:
         annonce = _bandeau_mise_a_jour(maj, en_cours, jeton)
+    # sans recherche ni filtre, le bouton du haut analyse tous les sites ; avec, SCRIPT_SITES
+    # y ajoute les sites affichés
     corps = """<div class="entete"><div><h1>Vos sites</h1>%s</div>
-<div class="actions"><form class="enligne" method="post" action="/analyser">%s%s</form>
-<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s%s""" % (
-        rappel, _jeton(jeton), bouton, annonce, _consigne(planif, jeton) if consigne else "", chantier,
-        "".join(lignes), bandeau_auteur())
-    return gabarit("Vos sites", corps, rafraichir=3 if en_cours else None, onglet="sites")
+<div class="actions"><form class="enligne analyser-sites" method="post" action="/analyser"%s>%s<span class="cles"></span>%s</form>
+<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s%s%s""" % (
+        rappel, " data-en-cours" if en_cours else "", _jeton(jeton), bouton, annonce,
+        _consigne(planif, jeton) if consigne else "", chantier, _outils_sites(sites, etat), "".join(lignes),
+        bandeau_auteur())
+    return gabarit("Vos sites", corps, onglet="sites", script=SCRIPT_SITES)
 
 
-def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees):
+def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees, analyse_du_site=None):
+    """en_cours : une analyse tourne (boutons désactivés, page rechargée) ;
+    analyse_du_site : c'est ce site qu'elle analyse en ce moment (panneau en cours)."""
+    if analyse_du_site is None:
+        analyse_du_site = en_cours
     def ignorer(d):
         return ('<form class="enligne" method="post" action="/ignorer">%s<input type="hidden" name="cle" value="%s">'
                 '<input type="hidden" name="adresse" value="%s"><button class="lien" type="submit">Ignorer</button></form>'
                 % (_jeton(jeton), e(cle), e(d["cle"])))
     ignorees = ('<p class="pied">%d adresse%s ignorée%s sur ce site.</p>'
                 % (nb_ignorees, "s" if nb_ignorees > 1 else "", "s" if nb_ignorees > 1 else "")) if nb_ignorees else ""
-    modifier = '<a class="bouton secondaire" href="/modifier?cle=%s">Modifier ce site</a>' % e(cle)
-    corps = "%s%s%s%s" % (RETOUR, entete_site(cfg["nom"], es, en_cours, niveau=1, actions=modifier),
+    actions = (_bouton_analyser(cle, jeton, en_cours, "Analyser ce site", retour=True)
+               + '<a class="bouton secondaire" href="/modifier?cle=%s">Modifier ce site</a>' % e(cle))
+    corps = "%s%s%s%s" % (RETOUR, entete_site(cfg["nom"], es, analyse_du_site, niveau=1, actions=actions),
                           tableau_adresses(es, ignorer, cfg["nom"]), ignorees)
-    return gabarit(cfg["nom"], corps, script=SCRIPT_TABLEAU, onglet="sites")
+    return gabarit(cfg["nom"], corps, script=SCRIPT_TABLEAU, onglet="sites", rafraichir=3 if en_cours else None)
 
 
 def page_modifier(cle, cfg, jeton, erreur=None):

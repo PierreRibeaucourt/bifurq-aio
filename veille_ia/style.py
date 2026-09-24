@@ -105,6 +105,20 @@ button:focus-visible{outline:2px solid var(--noir);outline-offset:2px;box-shadow
 .site-texte .encadre{margin-top:10px}
 .site-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .bloc-site{margin-top:30px}
+.carte-site[hidden]{display:none}
+
+/* Mes sites, longue liste : recherche et filtres par état, discrets */
+.outils-sites{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:22px 0 0}
+.outils-sites input{flex:0 1 240px;min-width:0;padding:6px 10px;border:1px solid var(--trait-fort);border-radius:3px;
+  background:var(--surface);color:var(--texte);font:14px/1.4 var(--police)}
+.filtres{display:flex;flex-wrap:wrap;gap:2px}
+.filtre{padding:4px 8px;border:0;border-radius:3px;background:none;color:var(--doux);font:13px/1.4 var(--police);
+  cursor:pointer}
+.filtre b{font-weight:600}
+.filtre:hover{color:var(--texte);background:rgba(18,20,23,.06)}
+.filtre[aria-pressed="true"]{color:var(--texte);box-shadow:inset 0 -2px 0 var(--jaune)}
+#sites-vide{margin-top:14px}
+@media (max-width:640px){.outils-sites input{flex-basis:100%}}
 
 /* mode d'emploi en tête de Mes sites */
 .consigne{position:relative;margin:0 0 16px;padding:14px 52px 14px 18px;background:var(--surface);
