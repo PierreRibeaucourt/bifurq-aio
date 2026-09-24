@@ -13,6 +13,7 @@ Deux voies, choisies par site :
     service, plus robuste contre les pare-feux, cadencé
     à 12 appels par minute au plus (limite du compte DataForSEO, quel qu'il soit)."""
 import base64
+import html
 import json
 import time
 import urllib.error
@@ -31,7 +32,7 @@ ERREURS = (404, 410)               # l'adresse n'existe pas : à rediriger
 PROTECTIONS = (
     ("Cloudflare", ("cf-mitigated:",), ("cloudflare",), "server: cloudflare"),
     ("DataDome", ("x-datadome:", "set-cookie: datadome="), ("captcha-delivery.com",), None),
-    ("Akamai", ("server: akamaighost",), ("errors.edgesuite.net",), None),
+    ("Akamai", ("server: akamaighost", "server-timing: ak_p;"), ("errors.edgesuite.net",), None),
     ("Imperva", ("x-iinfo:",), ("incapsula incident",), None),
     ("Sucuri", ("x-sucuri-id:", "x-sucuri-block:"), ("sucuri website firewall",), None),
 )
@@ -49,7 +50,7 @@ def protection(code, entetes, debut):
     if corrigee(code) or code in ERREURS:
         return None
     brut = "\n".join("%s: %s" % (k, v) for k, v in entetes).lower()
-    debut = debut.lower()
+    debut = html.unescape(debut).lower()            # Akamai écrit errors&#46;edgesuite&#46;net
     for nom, dans_entetes, dans_page, avec_entete in PROTECTIONS:
         if any(s in brut for s in dans_entetes):
             return nom

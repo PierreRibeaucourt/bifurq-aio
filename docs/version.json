@@ -1,4 +1,4 @@
 {
-  "version": "0.2.1",
-  "nouveautes": "L'outil réessaie au bout d'une heure quand la recherche d'une nouvelle version échoue. Rien ne change pour vos sites."
+  "version": "0.2.2",
+  "nouveautes": "Le plan de site est lu sous le nom de l'outil. Certaines protections anti-robots bloquaient sa lecture et empêchaient l'analyse. Akamai est aussi mieux reconnu."
 }
