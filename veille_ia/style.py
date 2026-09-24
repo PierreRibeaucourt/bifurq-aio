@@ -19,7 +19,8 @@ CSS = """
 --police:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
 --mono:"Cascadia Mono","Cascadia Code",Consolas,monospace}
 *{box-sizing:border-box}
-body{margin:0;background:var(--fond);color:var(--texte);font:15px/1.55 var(--police)}
+body{margin:0;background:var(--fond);color:var(--texte);font:15px/1.55 var(--police);
+  display:flex;flex-direction:column;min-height:100vh}
 a{color:var(--texte);text-underline-offset:3px}
 p{margin:0 0 10px}
 code{font-family:var(--mono);font-size:.92em}
@@ -41,8 +42,8 @@ h2{font-size:22px;line-height:1.2}
 .bandeau nav a:hover{opacity:1;background:rgba(255,255,255,.1)}
 .bandeau nav a[aria-current]{opacity:1;box-shadow:inset 0 -3px 0 var(--jaune)}
 
-/* page */
-.page{max-width:1320px;margin:0 auto;padding:30px 24px 72px}
+/* page : elle remplit la fenêtre, le pied de page reste en bas */
+.page{width:100%;max-width:1320px;margin:0 auto;padding:30px 24px 48px;flex:1 0 auto}
 .etroit{max-width:760px}
 .fil{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;color:var(--doux);font-weight:600;
   font-size:14px;text-decoration:none}
@@ -287,7 +288,7 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 }
 @media (max-width:640px){
   h1{font-size:30px}.accueil h1{font-size:36px}
-  .page{padding:22px 16px 56px}.bandeau-int{padding:12px 16px}
+  .page{padding:22px 16px 36px}.bandeau-int{padding:12px 16px}
   .site{grid-template-columns:auto minmax(0,1fr)}
   .site-actions{grid-column:1/-1;justify-content:flex-start}
   .panneau{width:64px;height:64px}.panneau .n{font-size:28px}
@@ -296,9 +297,9 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 }
 
 /* auteur : bandeau noir à bande de chantier, en bas de Mes sites et du rapport. Au moins 96 px
-   sous le contenu, et au bas de la fenêtre quand la page est courte. */
+   sous le contenu, et au bas de la page quand elle est courte. */
 .avant-auteur{height:96px}
-.page:has(> .auteur){display:flex;flex-direction:column;min-height:calc(100vh - 67px)}
+.page:has(> .auteur){display:flex;flex-direction:column}
 .page:has(> .auteur) > .avant-auteur{height:auto;flex:1 0 96px}
 .auteur{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px 22px;
   align-items:center;padding:28px 24px 22px;background:var(--noir);color:#fff;border-radius:4px;
@@ -314,10 +315,28 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 .auteur .auteur-nom{margin-top:5px;font:700 24px/1.1 var(--titre);font-stretch:87.5%}
 .auteur .auteur-texte{margin-top:6px;font-size:14px;color:#D5D8DC;max-width:62ch}
 @media (max-width:640px){.auteur{grid-template-columns:auto minmax(0,1fr)}.auteur .bouton{grid-column:1/-1}}
+
+/* pied de page : la marque et le site de l'outil, sur toutes les pages */
+.pied-outil{background:var(--surface);border-top:1px solid var(--trait)}
+.pied-int{max-width:1320px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;flex-wrap:wrap;
+  gap:8px 18px;font-size:13px;color:var(--doux)}
+.pied-int p{margin:0}
+.pied-marque{display:flex;align-items:center;gap:8px;font:700 16px/1 var(--titre);font-stretch:87.5%;
+  color:var(--texte)}
+.pied-marque svg{flex:none}
+.pied-int .pied-liens{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px 18px}
+.pied-liens a{display:inline-flex;align-items:center;gap:5px;color:var(--doux);font-weight:600;
+  overflow-wrap:anywhere}
+.pied-liens a:hover{color:var(--texte)}
+.pied-liens svg{flex:none}
+@media (max-width:640px){.pied-int{padding:14px 16px}.pied-int .pied-liens{margin-left:0}}
 """
 
 LINKEDIN = "https://www.linkedin.com/in/pierre-ribeaucourt/"
-FONCTIONNEMENT = "https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html"
+SITE = "https://pierreribeaucourt.github.io/bifurq-aio/"
+FONCTIONNEMENT = SITE + "fonctionnement.html"
+ICONE_EXTERNE = ('<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5h5v5M9.5 2.5l-7 7" '
+                 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 
 def bandeau_auteur():
@@ -329,6 +348,17 @@ def bandeau_auteur():
             'd\'amélioration ou un retour.</p></div>'
             '<a class="bouton" href="%s" target="_blank" rel="noopener">Me retrouver sur LinkedIn</a></aside>'
             % LINKEDIN)
+
+
+def pied_outil():
+    """La marque et le lien vers le site de l'outil, en bas de toutes les pages et du rapport."""
+    lien = '<a href="%s" target="_blank" rel="noopener">%s%s</a>'
+    return ('<footer class="pied-outil"><div class="pied-int">'
+            '<p class="pied-marque">%s<span>%s</span></p>'
+            '<p>Veille des adresses inventées par l\'IA de Google</p>'
+            '<p class="pied-liens">%s%s</p></div></footer>'
+            % (logo(22), NOM_OUTIL, lien % (SITE, "pierreribeaucourt.github.io/bifurq-aio", ICONE_EXTERNE),
+               lien % (FONCTIONNEMENT, "Comment fonctionne l'outil", ICONE_EXTERNE)))
 
 
 def logo(taille=28):
@@ -360,6 +390,6 @@ def gabarit(titre, corps, rafraichir=None, navigation=True, script="", onglet=No
 <meta name="viewport" content="width=device-width, initial-scale=1">%s
 <title>%s</title><link rel="icon" href="%s"><style>%s</style></head><body>
 <header class="bandeau"><div class="bandeau-int">%s%s</div></header>
-<main class="page">%s</main>%s</body></html>"""
-            % (meta, html.escape(titre), FAVICON, CSS, marque, nav, corps,
+<main class="page">%s</main>%s%s</body></html>"""
+            % (meta, html.escape(titre), FAVICON, CSS, marque, nav, corps, pied_outil(),
                "<script>%s</script>" % script if script else ""))

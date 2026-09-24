@@ -81,3 +81,14 @@ def test_consigne_masquee_laisse_le_rappel_des_analyses_sous_le_titre():
     assert "Vous pouvez fermer cet onglet." not in html
     assert "Analyse automatique à chaque démarrage de l&#x27;ordinateur." in html and 'href="/reglages">Changer' in html
     assert 'action="/masquer-consigne"' in pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
+
+
+def test_lien_vers_le_site_de_l_outil_en_bas_de_chaque_page():
+    ecrans = [pages.accueil(), pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j"),
+              pages.page_modifier("a", dict(SITES["a"], sitemaps=[]), "j"), pages.reglages(PLANIF, "j"),
+              pages.choisir([], set(), True, PLANIF, "j"), pages.erreur("Titre", "Message")]
+    for html in ecrans:
+        pied = html[html.index('<footer class="pied-outil">'):]
+        assert html.index("</main>") < html.index('<footer class="pied-outil">')
+        assert 'href="https://pierreribeaucourt.github.io/bifurq-aio/" target="_blank" rel="noopener"' in pied
+        assert "Bifurq AIO" in pied
