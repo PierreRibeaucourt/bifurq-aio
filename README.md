@@ -75,7 +75,7 @@ dossier `rapports` à côté.
 
 Rien d'autre n'est envoyé. Aucune donnée ne passe par un serveur de l'auteur de l'outil.
 
-Le détail est dans les [règles de confidentialité](https://pierreribeaucourt.github.io/veille-adresses-ia/confidentialite.html).
+Le détail est dans les [règles de confidentialité](https://pierreribeaucourt.github.io/bifurq-aio/confidentialite.html).
 
 ## Désinstaller
 

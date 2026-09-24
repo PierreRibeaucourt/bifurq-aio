@@ -16,7 +16,7 @@ import time
 import urllib.error
 import urllib.request
 
-UA = {"User-Agent": "veille-adresses-ia/0.1 (+https://github.com/ ; outil local, verifie ses propres pages)"}
+UA = {"User-Agent": "Bifurq-AIO/0.1 (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses propres pages)"}
 DELAI_COURTOISIE = 1.5
 DATAFORSEO_URL = "https://api.dataforseo.com/v3/on_page/instant_pages"
 
