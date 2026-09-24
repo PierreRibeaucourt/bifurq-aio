@@ -22,6 +22,11 @@ os.chdir(ICI)
 try:
     from veille_ia import watch
     watch.executer()
+    try:
+        from veille_ia import mise_a_jour
+        mise_a_jour.verifier()         # une nouvelle version s'annonce à la prochaine ouverture de l'interface
+    except Exception:
+        traceback.print_exc()
 except BaseException:
     traceback.print_exc()
     try:

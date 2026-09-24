@@ -30,15 +30,17 @@ Le détail de l'analyse est sur la page [Comment fonctionne l'outil](https://pie
 
 1. Si Python n'est pas encore installé sur votre ordinateur : téléchargez-le sur
    [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
-2. Téléchargez ce dépôt (bouton **Code** puis **Download ZIP** sur GitHub) et décompressez-le.
+2. Téléchargez l'outil avec le bouton **Télécharger pour Windows** de la
+   [page de l'outil](https://pierreribeaucourt.github.io/bifurq-aio/) et décompressez le fichier ZIP.
 3. Double-cliquez sur **installer** (le fichier `installer.pyw`). L'outil s'installe sans droits
    d'administrateur dans votre dossier d'applications Windows (`%LOCALAPPDATA%\Bifurq AIO`).
 4. L'outil s'ouvre dans votre navigateur. Un raccourci **Bifurq AIO** est ajouté sur votre bureau
    pour y revenir plus tard.
 5. Vous pouvez supprimer le fichier ZIP et le dossier téléchargés : l'outil n'en a plus besoin.
 
-**Mettre à jour** : téléchargez la nouvelle version et double-cliquez sur **installer**. Vos
-sites, connexions Google et réglages sont conservés.
+**Mettre à jour** : un bandeau annonce chaque nouvelle version en haut de **Vos sites**. Cliquez
+sur **Mettre à jour** : l'outil télécharge et installe la nouvelle version, puis la page se
+recharge. Vos sites, connexions Google et réglages sont conservés.
 
 ## Première utilisation
 
@@ -75,6 +77,9 @@ dossier `rapports` à côté.
 - Vers votre propre site : une requête par adresse pour vérifier qu'elle répond bien en erreur.
 - Vers DataForSEO si vous avez renseigné vos identifiants (facultatif) : la même vérification.
   Elle sert quand votre site bloque les requêtes venues de votre ordinateur.
+- Vers GitHub, qui héberge le site de l'outil : la lecture du numéro de la dernière version une
+  fois par jour, et le téléchargement de la nouvelle version quand vous cliquez sur
+  **Mettre à jour**.
 
 Rien d'autre n'est envoyé. Aucune donnée ne passe par un serveur de l'auteur de l'outil.
 

@@ -27,6 +27,26 @@ nécessaire, en discuter dans une issue d'abord.
 - `icone.ico` : icône du raccourci, même panneau de déviation que le logo (`veille_ia/style.py`).
 - `scripts_windows/` : PowerShell, notification et tâche planifiée.
 
+## Publier une version
+
+Les outils installés lisent `docs/version.json` sur le site une fois par jour. Quand ce fichier
+annonce un numéro plus récent que le leur, un bandeau **Mettre à jour** apparaît dans **Vos sites**.
+Le bouton télécharge le ZIP de l'étiquette `v<numéro>` du dépôt et lance son installateur.
+
+1. Changer `__version__` dans `veille_ia/__init__.py`, par exemple `0.3.0`.
+2. Mettre le même numéro dans `docs/version.json`, avec une ou deux phrases sur les nouveautés.
+   Elles s'affichent dans le bandeau.
+3. Pointer le bouton **Télécharger pour Windows** de `docs/index.html` sur la nouvelle étiquette.
+4. Lancer les tests : `tests/test_mise_a_jour.py` vérifie que ces trois numéros concordent.
+5. Publier le commit et l'étiquette dans le même envoi :
+
+```
+git tag v0.3.0
+git push origin main v0.3.0
+```
+
+Un envoi sur `main` sans changement de numéro ne propose rien aux outils installés.
+
 ## Lancer les tests
 
 ```
