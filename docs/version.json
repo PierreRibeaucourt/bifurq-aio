@@ -1,4 +1,4 @@
 {
-  "version": "0.2.0",
-  "nouveautes": "Les nouvelles versions s'installent en un clic depuis l'outil. L'outil reconnaît aussi les protections anti-robots et les erreurs 410."
+  "version": "0.2.1",
+  "nouveautes": "L'outil réessaie au bout d'une heure quand la recherche d'une nouvelle version échoue. Rien ne change pour vos sites."
 }

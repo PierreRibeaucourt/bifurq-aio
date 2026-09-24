@@ -30,6 +30,7 @@ URL_VERSION = SITE + "version.json"
 URL_ZIP = "https://github.com/PierreRibeaucourt/bifurq-aio/archive/refs/tags/v%s.zip"
 FORMAT = re.compile(r"^\d{1,4}\.\d{1,4}\.\d{1,4}$")
 INTERVALLE = 20 * 3600             # secondes entre deux lectures de version.json
+REESSAI = 3600                     # secondes avant un nouvel essai, après une lecture ratée
 PREFIXE_TEMP = "bifurq-aio-maj-"
 UA = {"User-Agent": "Bifurq-AIO/%s (+https://github.com/PierreRibeaucourt/bifurq-aio)" % __version__}
 
@@ -64,19 +65,23 @@ def _lire_en_ligne():
 
 def verifier(maintenant=None, force=False):
     """Lit version.json au plus une fois toutes les INTERVALLE secondes. Une erreur
-    (hors ligne, fichier illisible) ne gêne rien : nouvel essai à l'intervalle suivant."""
+    (hors ligne, fichier illisible) ne gêne rien : l'annonce précédente reste, nouvel
+    essai au bout de REESSAI secondes, et la cause est gardée pour le dépannage."""
     maintenant = time.time() if maintenant is None else maintenant
     etat = lire()
-    if not force and "verifie" in etat and maintenant - etat["verifie"] < INTERVALLE:
-        return etat
+    if not force:
+        if "verifie" in etat and maintenant - etat["verifie"] < INTERVALLE:
+            return etat
+        if "echec" in etat and maintenant - etat["echec"] < REESSAI:
+            return etat
     try:
         d = _lire_en_ligne()
         version = str(d.get("version", ""))
         if not FORMAT.match(version):
             raise ValueError("numéro de version illisible : %r" % version)
         etat = {"verifie": maintenant, "version": version, "nouveautes": str(d.get("nouveautes", ""))[:400]}
-    except Exception:
-        etat = dict(etat, verifie=maintenant)
+    except Exception as ex:
+        etat = dict(etat, echec=maintenant, erreur=("%s : %s" % (type(ex).__name__, ex))[:200])
     _ecrire(etat)
     return etat
 
