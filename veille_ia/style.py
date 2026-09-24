@@ -103,6 +103,15 @@ button:focus-visible{outline:2px solid var(--noir);outline-offset:2px;box-shadow
 .site-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .bloc-site{margin-top:30px}
 
+/* mode d'emploi en tête de Mes sites */
+.consigne{margin:0 0 16px;padding:14px 18px 14px 18px;background:var(--surface);border:1px solid var(--trait);
+  border-left:5px solid var(--noir);border-radius:4px}
+.consigne-titre{margin:0 0 6px;font-weight:700}
+.consigne ul{margin:0;padding-left:20px}
+.consigne li{margin:3px 0;font-size:14px;color:var(--doux)}
+.consigne li::marker{color:var(--jaune-fonce)}
+.consigne a{color:var(--texte)}
+
 /* encadrés */
 .encadre{border-left:5px solid;border-radius:3px;padding:11px 14px;margin-top:14px;font-size:14px}
 .encadre p{margin:0}

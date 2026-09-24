@@ -17,6 +17,15 @@ def test_analyse_en_cours_bouton_desactive():
     assert "disabled" in html and "Analyser maintenant" not in html
 
 
+def test_mes_sites_dit_qu_on_peut_fermer_l_onglet_et_quand_l_analyse_tourne():
+    html = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, actif_heure_fixe=True, heure_fixe="08:30"), "j")
+    assert "Vous pouvez fermer cet onglet." in html
+    assert "à chaque démarrage de l'ordinateur et chaque jour à 08:30" in html
+    assert "raccourci <b>Veille des adresses inventées</b> sur votre bureau" in html
+    arretee = pages.tableau_de_bord(SITES, ETAT, False, None, dict(PLANIF, active=False), "j")
+    assert "aucune analyse ne se lance toute seule" in arretee and "même onglet fermé" not in arretee
+
+
 def test_site_deja_suivi_grise_dans_le_choix():
     html = pages.choisir([{"propriete": "sc-domain:a.fr", "nom": "a.fr"}, {"propriete": "sc-domain:c.fr", "nom": "c.fr"}],
                          {"sc-domain:a.fr"}, False, PLANIF, "j")

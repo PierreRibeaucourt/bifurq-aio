@@ -19,15 +19,42 @@ def _minuscule(texte):
     return texte[:1].lower() + texte[1:]
 
 
-def texte_planification(planif):
+def _moments(planif):
+    """"à chaque démarrage de l'ordinateur et chaque jour à 09:15", ou "" si rien n'est prévu."""
     if not planif.get("active", True):
-        return "La surveillance automatique est arrêtée."
+        return ""
     moments = []
     if planif.get("au_demarrage"):
         moments.append("à chaque démarrage de l'ordinateur")
     if planif.get("actif_heure_fixe"):
         moments.append("chaque jour à %s" % planif.get("heure_fixe", "09:15"))
-    return "Analyse automatique %s." % " et ".join(moments) if moments else "Aucune analyse automatique."
+    return " et ".join(moments)
+
+
+def texte_planification(planif):
+    if not planif.get("active", True):
+        return "La surveillance automatique est arrêtée."
+    moments = _moments(planif)
+    return "Analyse automatique %s." % moments if moments else "Aucune analyse automatique."
+
+
+def _consigne(planif):
+    """Ce que l'utilisateur peut faire une fois ses sites ajoutés : fermer l'onglet, et comment
+    l'outil continue sans lui."""
+    moments = _moments(planif)
+    if moments:
+        quand = ('Les analyses se lancent toutes seules %s, même onglet fermé. <a href="/reglages">Changer</a>'
+                 % e(moments, quote=False))
+    else:
+        quand = ('La surveillance automatique est arrêtée : aucune analyse ne se lance toute seule. '
+                 '<a href="/reglages">La reprendre</a>')
+    return """<section class="consigne" aria-label="Fonctionnement de l'outil">
+<p class="consigne-titre">Vous pouvez fermer cet onglet.</p>
+<ul><li>%s</li>
+<li>Une notification Windows vous prévient dès qu'une nouvelle adresse est à corriger. Les analyses lancées depuis
+cette page n'en envoient pas : le résultat s'affiche ici.</li>
+<li>Pour revenir ici : raccourci <b>Veille des adresses inventées</b> sur votre bureau.</li></ul>
+</section>""" % quand
 
 
 def _choix_planification(planif):
@@ -124,11 +151,10 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton):
                     'Cette page se met à jour toute seule.</p></div>' % detail)
     bouton = ('<button class="bouton" type="submit" disabled><span class="roue"></span>Analyse en cours</button>'
               if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
-    corps = """<div class="entete"><div><h1>Vos sites</h1>
-<p class="sous">%s <a href="/reglages">Changer</a></p></div>
+    corps = """<div class="entete"><div><h1>Vos sites</h1></div>
 <div class="actions"><form class="enligne" method="post" action="/analyser">%s%s</form>
-<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s""" % (
-        e(texte_planification(planif)), _jeton(jeton), bouton, chantier, "".join(lignes))
+<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s""" % (
+        _jeton(jeton), bouton, _consigne(planif), chantier, "".join(lignes))
     return gabarit("Vos sites", corps, rafraichir=3 if en_cours else None, onglet="sites")
 
 
