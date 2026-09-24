@@ -70,6 +70,24 @@ def test_notification_gardee_dans_l_historique_ou_echec_journalise(monkeypatch):
     assert journal == ["notification en échec : notify-send absent"]
 
 
+def test_certificats_du_systeme_pour_le_python_de_python_org_sur_mac(monkeypatch, tmp_path):
+    import ssl
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    sans = ssl.DefaultVerifyPaths(str(tmp_path / "absent.pem"), str(tmp_path / "absent"), "", "", "", "")
+    monkeypatch.setattr(ssl, "get_default_verify_paths", lambda: sans)
+    systeme = tmp_path / "cert.pem"
+    systeme.write_text("certificats", encoding="utf-8")
+    monkeypatch.setattr(plateforme, "CERTIFICATS_MACOS", str(systeme))
+    assert plateforme.preparer_certificats("windows") is None and "SSL_CERT_FILE" not in os.environ
+    assert plateforme.preparer_certificats("mac") == str(systeme)
+    assert os.environ["SSL_CERT_FILE"] == str(systeme)
+    # Python de Homebrew, ou Install Certificates déjà lancé : rien à changer
+    monkeypatch.delenv("SSL_CERT_FILE")
+    avec = ssl.DefaultVerifyPaths(str(systeme), "", "", "", "", "")
+    monkeypatch.setattr(ssl, "get_default_verify_paths", lambda: avec)
+    assert plateforme.preparer_certificats("mac") is None and "SSL_CERT_FILE" not in os.environ
+
+
 # --- macOS ----------------------------------------------------------------------------------------
 @pytest.fixture
 def mac(tmp_path, monkeypatch):

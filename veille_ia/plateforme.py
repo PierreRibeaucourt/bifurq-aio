@@ -126,6 +126,27 @@ def creer_raccourci():
     return _systeme().creer_raccourci()
 
 
+CERTIFICATS_MACOS = "/etc/ssl/cert.pem"
+
+
+def preparer_certificats(systeme=None):
+    """Le Python de python.org pour macOS ne lit pas les certificats du système tant que
+    son script Install Certificates n'a pas été lancé : toute connexion HTTPS échoue
+    (Google, plans de site, mises à jour). macOS fournit les mêmes certificats dans
+    /etc/ssl/cert.pem. Rend le fichier retenu, ou None si rien n'est à changer."""
+    if (systeme or SYSTEME) != "mac" or os.environ.get("SSL_CERT_FILE"):
+        return None
+    import ssl
+    chemins = ssl.get_default_verify_paths()
+    if (chemins.cafile and os.path.isfile(chemins.cafile)) or (chemins.capath and os.path.isdir(chemins.capath)
+                                                               and os.listdir(chemins.capath)):
+        return None
+    if not os.path.isfile(CERTIFICATS_MACOS):
+        return None
+    os.environ["SSL_CERT_FILE"] = CERTIFICATS_MACOS         # lu à chaque connexion HTTPS
+    return CERTIFICATS_MACOS
+
+
 def notifier(titre, texte, rapport="", journal=None):
     """Notification du système, et son historique texte en secours : une notification
     effacée disparaît, notifications.log reste lisible après coup. Rend True si la
