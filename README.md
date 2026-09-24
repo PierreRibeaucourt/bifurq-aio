@@ -7,8 +7,8 @@ qui n'a jamais existé. Il s'agit souvent d'une vraie adresse déformée par un 
 de frappe ou un titre transformé en adresse. L'internaute qui clique tombe sur une page d'erreur.
 
 Cet outil repère ces adresses dans votre Search Console et vérifie qu'elles répondent bien en
-erreur. Il vous indique vers quelle page les rediriger et vous prévient par une notification
-Windows.
+erreur. Il vous indique vers quelle page les rediriger et vous prévient par une notification.
+Il fonctionne sous Windows, macOS et Linux.
 
 **Ce qu'il fait à chaque analyse :**
 1. il cherche les adresses de votre site qui remplissent quatre conditions : Google les a
@@ -26,17 +26,51 @@ Le détail de l'analyse est sur la page [Comment fonctionne l'outil](https://pie
 
 ## Installation
 
-**Windows uniquement pour l'instant.**
+L'outil a besoin de Python 3.8 ou plus récent. Il s'installe sans droits d'administrateur dans
+votre dossier personnel :
+
+| Système | Dossier de l'outil | Pour le rouvrir |
+|---|---|---|
+| Windows | `%LOCALAPPDATA%\Bifurq AIO` | raccourci **Bifurq AIO** sur le bureau |
+| macOS | `~/Library/Application Support/Bifurq AIO` | application **Bifurq AIO** (Launchpad, Spotlight) |
+| Linux | `~/.local/share/bifurq-aio` | **Bifurq AIO** dans le menu des applications |
+
+### Windows
 
 1. Si Python n'est pas encore installé sur votre ordinateur : téléchargez-le sur
    [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
 2. Téléchargez l'outil avec le bouton **Télécharger pour Windows** de la
    [page de l'outil](https://pierreribeaucourt.github.io/bifurq-aio/) et décompressez le fichier ZIP.
-3. Double-cliquez sur **installer** (le fichier `installer.pyw`). L'outil s'installe sans droits
-   d'administrateur dans votre dossier d'applications Windows (`%LOCALAPPDATA%\Bifurq AIO`).
-4. L'outil s'ouvre dans votre navigateur. Un raccourci **Bifurq AIO** est ajouté sur votre bureau
-   pour y revenir plus tard.
-5. Vous pouvez supprimer le fichier ZIP et le dossier téléchargés : l'outil n'en a plus besoin.
+3. Double-cliquez sur **installer** (le fichier `installer.pyw`).
+4. L'outil s'ouvre dans votre navigateur. Vous pouvez supprimer le fichier ZIP et le dossier
+   téléchargés : l'outil n'en a plus besoin.
+
+### macOS
+
+1. Si Python n'est pas encore installé sur votre Mac : téléchargez-le sur
+   [python.org/downloads](https://www.python.org/downloads/) et suivez l'installation.
+2. Ouvrez le Terminal (tapez Terminal dans Spotlight avec Cmd + Espace), collez cette ligne et
+   appuyez sur Entrée :
+
+   ```
+   curl -fsSL https://pierreribeaucourt.github.io/bifurq-aio/installer.sh | sh
+   ```
+3. L'outil s'ouvre dans votre navigateur.
+
+### Linux
+
+Ouvrez un terminal, collez cette ligne et appuyez sur Entrée :
+
+```
+curl -fsSL https://pierreribeaucourt.github.io/bifurq-aio/installer.sh | sh
+```
+
+Python 3 est présent d'office sur la plupart des distributions. Les analyses automatiques passent
+par systemd, ou par cron sur un système sans systemd. Les notifications passent par
+`notify-send`.
+
+La ligne d'installation télécharge la dernière version publiée puis lance son installateur
+(`installer.pyw`). Elle se relit dans [docs/installer.sh](docs/installer.sh).
 
 **Mettre à jour** : un bandeau annonce chaque nouvelle version en haut de **Vos sites**. Cliquez
 sur **Mettre à jour** : l'outil télécharge et installe la nouvelle version, puis la page se
@@ -69,9 +103,9 @@ recharge. Vos sites, connexions Google et réglages sont conservés.
   Le bouton **Retirer ce site** s'y trouve aussi.
 - **Réglages** : change le moment des analyses automatiques ou les arrête.
 
-Une notification Windows apparaît quand une analyse automatique trouve une nouvelle adresse à
-corriger. Un clic dessus ouvre le rapport. Le dernier rapport se trouve aussi dans
-`%LOCALAPPDATA%\Bifurq AIO\config\rapport.html`. Les rapports des 60 derniers jours sont dans le
+Une notification apparaît quand une analyse automatique trouve une nouvelle adresse à
+corriger. Sous Windows, un clic dessus ouvre le rapport. Le dernier rapport se trouve aussi dans
+`config/rapport.html`, dans le dossier de l'outil. Les rapports des 60 derniers jours sont dans le
 dossier `rapports` à côté.
 
 ## Quelles données sortent de votre ordinateur
@@ -91,21 +125,28 @@ Le détail est dans les [règles de confidentialité](https://pierreribeaucourt.
 
 ## Désinstaller
 
-1. Ouvrez l'outil et cliquez sur **Modifier** puis **Retirer ce site** pour chaque site. La tâche
-   planifiée Windows est supprimée avec le dernier site.
-2. Supprimez le dossier `%LOCALAPPDATA%\Bifurq AIO` (collez ce chemin dans la barre
-   d'adresse de l'Explorateur) et le raccourci du bureau.
+1. Ouvrez l'outil et cliquez sur **Modifier** puis **Retirer ce site** pour chaque site. Les
+   analyses automatiques sont supprimées avec le dernier site.
+2. Supprimez le dossier de l'outil (tableau de l'installation) et son raccourci : le raccourci du
+   bureau sous Windows, `~/Applications/Bifurq AIO.app` sur Mac,
+   `~/.local/share/applications/bifurq-aio.desktop` sous Linux.
 
-Pour retirer la tâche planifiée sans passer par l'outil : ouvrez le Planificateur de tâches
-Windows et supprimez la tâche **Bifurq AIO**.
+Pour retirer les analyses automatiques sans passer par l'outil :
+- Windows : ouvrez le Planificateur de tâches et supprimez la tâche **Bifurq AIO** ;
+- macOS : supprimez les fichiers `io.github.pierreribeaucourt.bifurq-aio.*.plist` de
+  `~/Library/LaunchAgents`, puis fermez et rouvrez votre session ;
+- Linux : `systemctl --user disable --now bifurq-aio-quotidien.timer bifurq-aio-demarrage.timer`,
+  ou retirez les lignes marquées `# bifurq-aio` avec `crontab -e`.
 
 ## Dépannage
 
 - **Windows demande avec quelle application ouvrir `installer`** : Python n'est pas installé.
   Installez-le (étape 1 de l'installation) puis double-cliquez à nouveau sur `installer`.
 - **Une fenêtre *L'installation n'a pas pu se terminer* s'affiche** : le détail est dans
-  `%LOCALAPPDATA%\Bifurq AIO\config\installation.log`. Joignez ce fichier si vous signalez le
+  `config/installation.log`, dans le dossier de l'outil. Joignez ce fichier si vous signalez le
   problème.
+- **Le Terminal répond que Python 3 n'est pas installé** (macOS, Linux) : installez-le, puis collez
+  à nouveau la ligne d'installation.
 - **Aucun site trouvé après la connexion** : le compte Google choisi n'a pas accès à la Search
   Console du site. Ajoutez-le comme utilisateur sur
   [search.google.com/search-console](https://search.google.com/search-console) puis
@@ -115,7 +156,7 @@ Windows et supprimez la tâche **Bifurq AIO**.
   peut alors pas tester ses adresses. Autorisez l'adresse IP de votre ordinateur dans cette
   protection en suivant [la marche à suivre](https://pierreribeaucourt.github.io/bifurq-aio/fonctionnement.html#site-protege).
 - **L'outil ne répond plus dans le navigateur** : il s'arrête seul après 45 minutes sans usage.
-  Rouvrez-le avec le raccourci du bureau.
+  Rouvrez-le avec son raccourci.
 
 ## Pour les développeurs
 

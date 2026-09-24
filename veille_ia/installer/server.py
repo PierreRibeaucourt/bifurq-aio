@@ -21,6 +21,7 @@ import os
 import re
 import secrets
 import socket
+import socketserver
 import sys
 import threading
 import time
@@ -441,13 +442,17 @@ class Serveur(http.server.ThreadingHTTPServer):
     """Port réservé à cette seule copie de l'outil. Sous Windows, SO_REUSEADDR (posé par
     défaut par http.server) laisse une seconde copie, installée dans un autre dossier, se
     lier au même port : le navigateur parle alors à l'une ou à l'autre au hasard, et la
-    connexion Google, gardée en mémoire par l'une, manque à l'autre."""
+    connexion Google, gardée en mémoire par l'une, manque à l'autre.
+
+    Sans le socket.getfqdn de http.server : ce nom ne sert à rien ici, et sa recherche DNS
+    inverse retardait l'ouverture de l'interface de 25 secondes sur un Mac (GitHub Actions)."""
     allow_reuse_address = os.name != "nt"
 
     def server_bind(self):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        super().server_bind()
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[0], self.server_address[1]
 
 
 def _fichier_instance():

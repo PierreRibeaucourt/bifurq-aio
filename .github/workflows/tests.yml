@@ -45,6 +45,10 @@ jobs:
         run: |
           curl -fsSLO https://www.python.org/ftp/python/3.13.12/python-3.13.12-macos11.pkg
           sudo installer -pkg python-3.13.12-macos11.pkg -target /
-          echo "PYTHON_ESSAI=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3" >> "$GITHUB_ENV"
+          P=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+          "$P" -c "import ssl; print(ssl.get_default_verify_paths())"
+          # comme sur un Mac où le script Install Certificates n'a jamais tourné
+          sudo rm -f "$("$P" -c 'import ssl; print(ssl.get_default_verify_paths().openssl_cafile)')"
+          echo "PYTHON_ESSAI=$P" >> "$GITHUB_ENV"
       - name: Installation, interface, planification, notification, mise à jour
         run: sh .github/essai_installation.sh
