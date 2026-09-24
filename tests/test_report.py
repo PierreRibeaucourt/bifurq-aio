@@ -66,7 +66,7 @@ def test_export_csv_pour_excel():
     peu, beaucoup, sans = _adresse("peu"), _adresse("beaucoup", sure=False), _adresse("sans", cible="")
     peu["impressions"], beaucoup["impressions"], sans["impressions"] = 2, 90, 5
     lignes = report.csv_adresses({"a_rediriger": [peu, beaucoup, sans]}).splitlines()
-    assert lignes[0] == "Adresse inventée;Rediriger vers;Confiance;Vues (3 mois)"
+    assert lignes[0] == "Adresse inventée;Rediriger vers;Confiance;Vues (7 jours)"
     assert lignes[1:] == ["/beaucoup;/collections/y;À vérifier;90", "/sans;;Aucune page similaire;5",
                           "/peu;/collections/y;Sûre;2"]
 
