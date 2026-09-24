@@ -18,7 +18,10 @@ import time
 import urllib.error
 import urllib.request
 
-UA = {"User-Agent": "Bifurq-AIO/0.1 (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses propres pages)"}
+from . import __version__
+
+UA = {"User-Agent": "Bifurq-AIO/%s (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses "
+                    "propres pages)" % __version__}
 DELAI_COURTOISIE = 1.5
 DATAFORSEO_URL = "https://api.dataforseo.com/v3/on_page/instant_pages"
 ERREURS = (404, 410)               # l'adresse n'existe pas : à rediriger

@@ -145,7 +145,16 @@ def environnement_valide(dossier_venv):
     return False
 
 
-def installer(source=ICI, destination=DESTINATION):
+def commande_interface(scripts, port=None):
+    """port : mise à jour lancée depuis l'interface. La nouvelle interface reprend son port
+    sans ouvrir d'onglet : la page restée ouverte la retrouve et s'y recharge."""
+    commande = [os.path.join(scripts, "pythonw.exe"), "-m", "veille_ia.installer.server"]
+    if port:
+        commande += ["--port", str(port), "--sans-navigateur"]
+    return commande
+
+
+def installer(source=ICI, destination=DESTINATION, port=None):
     """Rend le message de fin à afficher, ou None (installateur relancé depuis le dossier
     installé lui-même : simple réparation, rien à annoncer)."""
     depuis_telechargement = not meme_dossier(source, destination)
@@ -166,8 +175,7 @@ def installer(source=ICI, destination=DESTINATION):
                        capture_output=True, text=True, timeout=180, creationflags=SANS_FENETRE)
     if r.returncode != 0:
         raise RuntimeError("tâche planifiée non mise en place : %s" % (r.stderr or r.stdout).strip()[-600:])
-    subprocess.Popen([os.path.join(scripts, "pythonw.exe"), "-m", "veille_ia.installer.server"],
-                     cwd=destination, close_fds=True)
+    subprocess.Popen(commande_interface(scripts, port), cwd=destination, close_fds=True)
     if not depuis_telechargement:
         return None
     if mise_a_jour:
@@ -187,8 +195,13 @@ if __name__ == "__main__":
         message("Cet outil demande Python 3.8 ou plus récent. Installez la dernière version depuis "
                 "python.org, puis relancez l'installateur.", erreur=True)
         sys.exit(1)
+    # --mise-a-jour PORT : lancé par le bouton Mettre à jour de l'interface, sans message de
+    # fin (la page ouverte montre la nouvelle version) ; une erreur s'affiche quand même
+    port = None
+    if len(sys.argv) > 2 and sys.argv[1] == "--mise-a-jour" and sys.argv[2].isdigit():
+        port = int(sys.argv[2])
     try:
-        fin = installer()
+        fin = installer(port=port)
     except Exception:
         detail = traceback.format_exc()
         journal = os.path.join(DESTINATION, "config", "installation.log")
@@ -200,5 +213,5 @@ if __name__ == "__main__":
         message("L'installation n'a pas pu se terminer.\n\n%s\n\nLe détail est dans %s."
                 % (detail.strip().splitlines()[-1], journal), erreur=True)
         sys.exit(1)
-    if fin:
+    if fin and not port:
         message(fin)

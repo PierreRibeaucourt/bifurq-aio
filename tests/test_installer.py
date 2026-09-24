@@ -95,3 +95,9 @@ def test_ne_remplace_jamais_des_sites_deja_installes(tmp_path):
 def test_installateur_lance_depuis_le_dossier_installe(tmp_path):
     assert installeur.meme_dossier(str(tmp_path), str(tmp_path / "." / ""))
     assert not installeur.meme_dossier(str(tmp_path / "a"), str(tmp_path / "b"))
+
+
+def test_mise_a_jour_relance_l_interface_sur_son_port_sans_nouvel_onglet():
+    assert installeur.commande_interface("S")[1:] == ["-m", "veille_ia.installer.server"]
+    assert installeur.commande_interface("S", 51234)[1:] == ["-m", "veille_ia.installer.server", "--port", "51234",
+                                                             "--sans-navigateur"]

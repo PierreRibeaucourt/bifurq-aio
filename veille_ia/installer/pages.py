@@ -3,6 +3,7 @@
 import html
 import json
 
+from .. import __version__
 from ..report import SCRIPT_TABLEAU, entete_site, tableau_adresses
 from ..style import NOM_OUTIL, bandeau_auteur, gabarit
 
@@ -127,7 +128,21 @@ rel="noopener">Pierre Ribeaucourt</a>.</p>
 </ol>""", navigation=False)
 
 
-def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True):
+def _bandeau_mise_a_jour(maj, en_cours, jeton):
+    """Nouvelle version disponible : ses nouveautés et le bouton qui l'installe."""
+    if en_cours:
+        bouton = ('<button class="bouton" type="submit" disabled>Mettre à jour</button>'
+                  '<p class="meta">Possible à la fin de l\'analyse en cours.</p>')
+    else:
+        bouton = '<button class="bouton" type="submit">Mettre à jour</button>'
+    nouveautes = '<p>%s</p>' % e(maj["nouveautes"]) if maj.get("nouveautes") else ""
+    return ('<section class="maj" aria-label="Nouvelle version"><div><p class="maj-titre">La version %s de %s est '
+            'disponible.</p>%s<p class="meta">Vos sites et réglages sont conservés.</p></div>'
+            '<form class="maj-action" method="post" action="/mettre-a-jour">%s%s</form></section>'
+            % (e(maj["version"]), e(NOM_OUTIL), nouveautes, _jeton(jeton), bouton))
+
+
+def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True, maj=None, a_jour=False):
     actif = (progression or {}).get("site") if en_cours else None
     lignes = []
     for cle, cfg in sites.items():
@@ -155,11 +170,17 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
               if en_cours else '<button class="bouton" type="submit">Analyser maintenant</button>')
     # consigne masquée : le moment des analyses reste rappelé sous le titre
     rappel = "" if consigne else '<p class="sous">%s <a href="/reglages">Changer</a></p>' % e(texte_planification(planif))
+    annonce = ""
+    if a_jour:
+        annonce = ('<div class="encadre succes" role="status"><p>%s est passé à la version %s.</p></div>'
+                   % (e(NOM_OUTIL), e(__version__)))
+    elif maj:
+        annonce = _bandeau_mise_a_jour(maj, en_cours, jeton)
     corps = """<div class="entete"><div><h1>Vos sites</h1>%s</div>
 <div class="actions"><form class="enligne" method="post" action="/analyser">%s%s</form>
-<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s""" % (
-        rappel, _jeton(jeton), bouton, _consigne(planif, jeton) if consigne else "", chantier, "".join(lignes),
-        bandeau_auteur())
+<a class="bouton secondaire" href="/connecter">Ajouter un site</a></div></div>%s%s%s%s%s""" % (
+        rappel, _jeton(jeton), bouton, annonce, _consigne(planif, jeton) if consigne else "", chantier,
+        "".join(lignes), bandeau_auteur())
     return gabarit("Vos sites", corps, rafraichir=3 if en_cours else None, onglet="sites")
 
 
@@ -324,6 +345,34 @@ depuis cette page.</p>
 <div class="actions bloc-actions"><button class="bouton" type="submit">Enregistrer</button></div></section>
 </form>%s</div>""" % (bloc, _jeton(jeton), _choix_planification(planif), arret)
     return gabarit("Réglages", corps, onglet="reglages")
+
+
+SCRIPT_MISE_A_JOUR = """(function(){
+var ancienne=%s,version=%s,debut=Date.now();
+function suite(){
+  if(Date.now()-debut>150000){document.getElementById("lent").hidden=false;return;}
+  setTimeout(essai,1500);
+}
+function essai(){
+  fetch("/ping",{cache:"no-store"}).then(function(r){return r.text();}).then(function(t){
+    var p=t.split(" ");
+    if(p[0]==="bifurq-aio"&&p[1]!==ancienne){location.replace("/?maj="+encodeURIComponent(version));}
+    else{suite();}
+  }).catch(suite);
+}
+setTimeout(essai,3000);
+})();"""
+
+
+def mise_a_jour_en_cours(version, empreinte):
+    """Attend la nouvelle interface (même port, autre empreinte), puis s'y recharge."""
+    corps = ("""<div class="etroit"><h1>Mise à jour en cours</h1>
+<div class="chantier" role="status"><span class="roue"></span><p>Installation de la version %s. Cette page se
+recharge toute seule dans quelques secondes.</p></div>
+<div class="encadre alerte" id="lent" hidden><p>La mise à jour prend plus de temps que prévu. Fermez cette page
+et rouvrez %s avec le raccourci de votre bureau.</p></div></div>""" % (e(version), e(NOM_OUTIL)))
+    return gabarit("Mise à jour", corps, navigation=False,
+                   script=SCRIPT_MISE_A_JOUR % (json.dumps(empreinte), json.dumps(version)))
 
 
 def erreur(titre, message, action_href=None, action_texte=None):

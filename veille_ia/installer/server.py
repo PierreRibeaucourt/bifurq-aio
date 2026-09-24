@@ -30,7 +30,7 @@ import urllib.request
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import config, gsc_api, oauth, scheduler_windows, sitemap, watch
+from .. import __version__, config, gsc_api, mise_a_jour, oauth, scheduler_windows, sitemap, watch
 from ..erreurs import expliquer
 from . import pages
 
@@ -55,7 +55,8 @@ def _empreinte():
 EMPREINTE = _empreinte()
 
 _session = {"etat_oauth": None, "jeton_temp": None, "reconnecter": None, "fil": None,
-            "jeton_formulaire": secrets.token_urlsafe(24), "derniere_requete": time.time()}
+            "jeton_formulaire": secrets.token_urlsafe(24), "derniere_requete": time.time(),
+            "mise_a_jour": None}
 
 
 # --- analyse en arrière-plan -----------------------------------------------------------------
@@ -170,7 +171,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if chemin == "/ping":
                 return self._repondre("%s %s" % (PING, EMPREINTE), 200, "text/plain; charset=utf-8")
             if chemin == "/":
-                return self._accueil()
+                return self._accueil(q)
             if chemin == "/connecter":
                 return self._connecter(q)
             if chemin == REDIRECT_PATH:
@@ -204,7 +205,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             routes = {"/activer": self._activer, "/analyser": self._analyser, "/ignorer": self._ignorer,
                       "/retirer": self._retirer, "/reglages": self._reglages, "/arreter": self._arreter,
-                      "/modifier": self._modifier, "/masquer-consigne": self._masquer_consigne}
+                      "/modifier": self._modifier, "/masquer-consigne": self._masquer_consigne,
+                      "/mettre-a-jour": self._mettre_a_jour}
             if self.path not in routes:
                 return self._repondre(pages.erreur("Page introuvable", "Cette page n'existe pas."), 404)
             routes[self.path](champs)
@@ -212,7 +214,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._probleme(ex)
 
     # --- pages ---
-    def _accueil(self):
+    def _accueil(self, q=None):
         donnees = config.lire()
         if not donnees["sites"]:
             return self._repondre(pages.accueil())
@@ -220,7 +222,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._repondre(pages.tableau_de_bord(donnees["sites"], watch.lire_etat(), en_cours,
                                              watch.lire_progression() if en_cours else None,
                                              donnees["planification"], _session["jeton_formulaire"],
-                                             consigne=not donnees.get("interface", {}).get("consigne_masquee")))
+                                             consigne=not donnees.get("interface", {}).get("consigne_masquee"),
+                                             maj=mise_a_jour.disponible(),
+                                             a_jour=_un(q or {}, "maj") == __version__))
 
     def _connecter(self, q):
         _session["reconnecter"] = _un(q, "site") or None
@@ -334,6 +338,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _masquer_consigne(self, champs):
         config.masquer_consigne()
         self._rediriger("/", 303)
+
+    def _mettre_a_jour(self, champs):
+        """Télécharge la nouvelle version, répond par une page qui attend la nouvelle
+        interface, puis lance l'installateur, qui arrêtera celle-ci."""
+        maj = mise_a_jour.disponible()
+        if _session["mise_a_jour"]:                    # second clic : déjà en route
+            return self._repondre(pages.mise_a_jour_en_cours(_session["mise_a_jour"], EMPREINTE))
+        if not maj or analyse_active():
+            return self._rediriger("/", 303)
+        try:
+            dossier_code = mise_a_jour.telecharger(maj["version"])
+        except Exception:
+            _journal(traceback.format_exc())
+            return self._repondre(pages.erreur(
+                "Mise à jour impossible", "La version %s n'a pas pu être téléchargée. Vérifiez votre connexion "
+                "à Internet et réessayez." % maj["version"]), 502)
+        _session["mise_a_jour"] = maj["version"]
+        self._repondre(pages.mise_a_jour_en_cours(maj["version"], EMPREINTE))
+        threading.Timer(1.0, mise_a_jour.lancer_installateur, (dossier_code, self.server.server_port)).start()
 
     def _analyser(self, champs):
         lancer_analyse()
@@ -472,8 +495,12 @@ def demarrer(port_prefere=PORT_PREFERE, ouvrir_navigateur=True):
                 return
     threading.Thread(target=veilleur, daemon=True).start()
     print("outil ouvert sur %s" % url, flush=True)
+    # nouvelle version : lue en parallèle, avant l'ouverture de la page si elle répond vite
+    verification = threading.Thread(target=mise_a_jour.verifier, daemon=True)
+    verification.start()
     if ouvrir_navigateur:
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        verification.join(1.5)
+        threading.Timer(0.1, lambda: webbrowser.open(url)).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -487,5 +514,16 @@ def demarrer(port_prefere=PORT_PREFERE, ouvrir_navigateur=True):
             pass
 
 
+def _arguments(args):
+    """--port N (port à reprendre, après une mise à jour) et --sans-navigateur."""
+    port = PORT_PREFERE
+    if "--port" in args:
+        i = args.index("--port")
+        if i + 1 < len(args) and args[i + 1].isdigit():
+            port = int(args[i + 1])
+    return port, "--sans-navigateur" not in args
+
+
 if __name__ == "__main__":
-    demarrer()
+    port, navigateur = _arguments(sys.argv[1:])
+    demarrer(port, navigateur)

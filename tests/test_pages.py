@@ -92,3 +92,20 @@ def test_lien_vers_le_site_de_l_outil_en_bas_de_chaque_page():
         assert html.index("</main>") < html.index('<footer class="pied-outil">')
         assert 'href="https://pierreribeaucourt.github.io/bifurq-aio/" target="_blank" rel="noopener"' in pied
         assert "Bifurq AIO" in pied
+
+
+def test_mise_a_jour_attendue_a_la_fin_de_l_analyse():
+    maj = {"version": "9.9.9", "nouveautes": "Plus rapide."}
+    pendant = pages.tableau_de_bord(SITES, ETAT, True, None, PLANIF, "j", maj=maj)
+    assert '<button class="bouton" type="submit" disabled>Mettre à jour</button>' in pendant
+    apres = pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j", maj=maj)
+    assert '<button class="bouton" type="submit">Mettre à jour</button>' in apres
+    assert "Mettre à jour" not in pages.tableau_de_bord(SITES, ETAT, False, None, PLANIF, "j")
+
+
+def test_page_d_attente_recharge_la_nouvelle_version():
+    html = pages.mise_a_jour_en_cours("9.9.9", "123")
+    assert 'var ancienne="123",version="9.9.9"' in html and 'fetch("/ping"' in html
+    assert 'id="lent" hidden' in html
+    for interdit in ("«", "»", "—", "–"):
+        assert interdit not in html

@@ -8,6 +8,8 @@ Windows 10 et 11 (Bahnschrift, Segoe UI, Cascadia), rien à télécharger."""
 import html
 import urllib.parse
 
+from . import __version__
+
 NOM_OUTIL = "Bifurq AIO"
 
 CSS = """
@@ -316,6 +318,16 @@ ol.etapes li::before{content:counter(etape);flex:none;display:flex;align-items:c
 .auteur .auteur-texte{margin-top:6px;font-size:14px;color:#D5D8DC;max-width:62ch}
 @media (max-width:640px){.auteur{grid-template-columns:auto minmax(0,1fr)}.auteur .bouton{grid-column:1/-1}}
 
+/* nouvelle version disponible, en haut de Mes sites */
+.maj{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;margin-bottom:18px;
+  padding:16px 20px;background:var(--surface);border:1px solid var(--trait);border-left:6px solid var(--jaune);
+  border-radius:4px}
+.maj p{margin:0}
+.maj p+p{margin-top:4px}
+.maj-titre{font-weight:700}
+.maj-action{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+@media (max-width:640px){.maj-action{align-items:stretch;width:100%}}
+
 /* pied de page : la marque et le site de l'outil, sur toutes les pages */
 .pied-outil{background:var(--surface);border-top:1px solid var(--trait)}
 .pied-int{max-width:1320px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;flex-wrap:wrap;
@@ -355,9 +367,9 @@ def pied_outil():
     lien = '<a href="%s" target="_blank" rel="noopener">%s%s</a>'
     return ('<footer class="pied-outil"><div class="pied-int">'
             '<p class="pied-marque">%s<span>%s</span></p>'
-            '<p>Veille des adresses inventées par l\'IA de Google</p>'
+            '<p>Veille des adresses inventées par l\'IA de Google</p><p>Version %s</p>'
             '<p class="pied-liens">%s%s</p></div></footer>'
-            % (logo(22), NOM_OUTIL, lien % (SITE, "pierreribeaucourt.github.io/bifurq-aio", ICONE_EXTERNE),
+            % (logo(22), NOM_OUTIL, __version__, lien % (SITE, "pierreribeaucourt.github.io/bifurq-aio", ICONE_EXTERNE),
                lien % (FONCTIONNEMENT, "Comment fonctionne l'outil", ICONE_EXTERNE)))
 
 

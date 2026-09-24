@@ -223,3 +223,80 @@ def test_masquer_la_consigne_de_mes_sites(serveur):
     code, _, lieu = _requete(serveur, "POST", "/masquer-consigne", {"jeton": server._session["jeton_formulaire"]})
     assert (code, lieu) == (303, "/")
     assert "Vous pouvez fermer cet onglet." not in _requete(serveur, "GET", "/")[1]
+
+
+# --- mise à jour en un clic ---
+def _annoncer(version):
+    from veille_ia import mise_a_jour
+    mise_a_jour._ecrire({"verifie": 0, "version": version, "nouveautes": "Plus rapide."})
+
+
+def _version_suivante():
+    from veille_ia import __version__
+    majeur, mineur, _ = (int(x) for x in __version__.split("."))
+    return "%d.%d.0" % (majeur, mineur + 1)
+
+
+class _TimerImmediat:
+    def __init__(self, delai, fonction, args=()):
+        self.fonction, self.args = fonction, args
+
+    def start(self):
+        self.fonction(*self.args)
+
+
+def test_bandeau_de_mise_a_jour_dans_mes_sites(serveur):
+    config.ajouter_site("exemple", nom="exemple.fr", propriete="sc-domain:exemple.fr", sitemaps=[])
+    _annoncer(_version_suivante())
+    code, corps, _ = _requete(serveur, "GET", "/")
+    assert code == 200
+    assert "La version %s de Bifurq AIO est disponible." % _version_suivante() in corps
+    assert 'action="/mettre-a-jour"' in corps and "Plus rapide." in corps
+
+
+def test_mettre_a_jour_telecharge_puis_lance_l_installateur_une_seule_fois(serveur, monkeypatch):
+    from veille_ia import mise_a_jour
+    monkeypatch.setitem(server._session, "mise_a_jour", None)
+    _annoncer(_version_suivante())
+    telecharges, lances = [], []
+    monkeypatch.setattr(mise_a_jour, "telecharger", lambda v: telecharges.append(v) or "C:/code")
+    monkeypatch.setattr(mise_a_jour, "lancer_installateur", lambda dossier, port: lances.append((dossier, port)))
+    monkeypatch.setattr(server.threading, "Timer", _TimerImmediat)
+    jeton = {"jeton": server._session["jeton_formulaire"]}
+    code, corps, _ = _requete(serveur, "POST", "/mettre-a-jour", jeton)
+    assert code == 200 and "Mise à jour en cours" in corps and "Installation de la version" in corps
+    assert telecharges == [_version_suivante()] and lances == [("C:/code", serveur)]
+    code, corps, _ = _requete(serveur, "POST", "/mettre-a-jour", jeton)       # second clic
+    assert code == 200 and "Mise à jour en cours" in corps and len(lances) == 1
+
+
+def test_mettre_a_jour_sans_nouvelle_version_revient_a_mes_sites(serveur, monkeypatch):
+    monkeypatch.setitem(server._session, "mise_a_jour", None)
+    code, _, lieu = _requete(serveur, "POST", "/mettre-a-jour", {"jeton": server._session["jeton_formulaire"]})
+    assert code == 303 and lieu == "/"
+
+
+def test_telechargement_rate_rien_n_est_lance(serveur, monkeypatch):
+    from veille_ia import mise_a_jour
+    monkeypatch.setitem(server._session, "mise_a_jour", None)
+    _annoncer(_version_suivante())
+
+    def echec(version):
+        raise OSError("hors ligne")
+    monkeypatch.setattr(mise_a_jour, "telecharger", echec)
+    monkeypatch.setattr(mise_a_jour, "lancer_installateur", lambda *a: pytest.fail("installateur lancé"))
+    code, corps, _ = _requete(serveur, "POST", "/mettre-a-jour", {"jeton": server._session["jeton_formulaire"]})
+    assert code == 502 and "Mise à jour impossible" in corps
+    assert server._session["mise_a_jour"] is None
+
+
+def test_apres_la_mise_a_jour_mes_sites_le_confirme(serveur):
+    from veille_ia import __version__
+    config.ajouter_site("exemple", nom="exemple.fr", propriete="sc-domain:exemple.fr", sitemaps=[])
+    code, corps, _ = _requete(serveur, "GET", "/?maj=%s" % __version__)
+    assert "Bifurq AIO est passé à la version %s." % __version__ in corps
+
+
+def test_options_de_la_nouvelle_interface():
+    assert server._arguments(["--port", "51234", "--sans-navigateur"]) == (51234, False)
+    assert server._arguments([]) == (server.PORT_PREFERE, True)
