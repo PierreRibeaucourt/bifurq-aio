@@ -13,17 +13,23 @@ ADRESSE = "https://exemple.fr/collections/complement-pour-le-sommeil"
 
 
 class _ControleurHTTPFactice:
-    def __init__(self, codes):
-        self.codes = codes
+    def __init__(self, codes, titres=None):
+        self.codes, self.titres, self.titres_lus = codes, titres or {}, []
 
     def controler(self, url):
         r = self.codes.get(url, 200)
         return dict(r, finale=url) if isinstance(r, dict) else {"code": r, "finale": url}
 
+    def lire_titres(self, url):
+        self.titres_lus.append(url)
+        return self.titres.get(url)
+
 
 @pytest.fixture(autouse=True)
 def _racine_isolee(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "racine", lambda: str(tmp_path))
+    # jamais de vraie requête vers les sites d'exemple
+    monkeypatch.setattr("veille_ia.http_check.ControleurHTTP.lire_titres", lambda self, url: None)
 
 
 def _site(seuil=15):
@@ -66,6 +72,46 @@ def test_aucune_page_ne_ressemble_previent_sans_cible(monkeypatch):
     assert len(r["a_rediriger"]) == 1
     assert r["a_rediriger"][0]["cible_url"] == ""
     assert r["a_rediriger"][0]["sure"] is False
+
+
+INVENTEE = "https://exemple.fr/blogs/news/dette-de-sommeil-definition-calcul-et-solutions-durales"
+VRAIE = "https://exemple.fr/blogs/news/dette-de-sommeil"
+PLAN_BLOG = {VRAIE, "https://exemple.fr/blogs/news/sommeil-profond", "https://exemple.fr/blogs/news/calcul-imc",
+             "https://exemple.fr/blogs/news/solutions-anti-stress", "https://exemple.fr/blogs/news/definition-du-stress",
+             "https://exemple.fr/blogs/news/magnesium-et-sommeil"}
+
+
+def test_propose_la_page_dont_le_titre_ressemble(monkeypatch):
+    """L'IA de Google fabrique l'adresse à partir du titre de la vraie page."""
+    _simuler(monkeypatch, PLAN_BLOG, [{"URL": INVENTEE, "Impressions": 40}])
+    http = _ControleurHTTPFactice({INVENTEE: 404},
+                                  {VRAIE: ["Dette de sommeil : définition, calcul et solutions durables"]})
+    d = watch.veille_site("exemple", _site(), http, lambda m: None, AUJOURD_HUI)["a_rediriger"][0]
+    assert (d["cible_url"], d["sure"]) == (VRAIE, True)
+    assert VRAIE in http.titres_lus and len(http.titres_lus) == watch.TITRES_A_LIRE
+
+
+def test_titres_gardes_et_page_illisible_reessayee_le_lendemain(monkeypatch):
+    _simuler(monkeypatch, PLAN_BLOG, [{"URL": INVENTEE, "Impressions": 40}])
+    titres = {VRAIE: ["Dette de sommeil : définition, calcul et solutions durables"]}
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({INVENTEE: 404}, titres), lambda m: None, AUJOURD_HUI)
+    http = _ControleurHTTPFactice({INVENTEE: 404})
+    d = watch.veille_site("exemple", _site(), http, lambda m: None, AUJOURD_HUI)["a_rediriger"][0]
+    assert http.titres_lus == [] and d["cible_url"] == VRAIE        # titres lus gardés 30 jours
+    demain = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+    watch.veille_site("exemple", _site(), http, lambda m: None, demain)
+    assert len(http.titres_lus) == watch.TITRES_A_LIRE - 1          # sauf les pages illisibles la veille
+    assert VRAIE not in http.titres_lus
+
+
+def test_adresse_proche_sans_lire_les_titres(monkeypatch):
+    inventee = "https://exemple.fr/blogs/news/vitamine-b12-effet-immedit"
+    _simuler(monkeypatch, {"https://exemple.fr/blogs/news/vitamine-b12-effet-immediat",
+                           "https://exemple.fr/blogs/news/vitamine-d-et-soleil"}, [{"URL": inventee, "Impressions": 40}])
+    http = _ControleurHTTPFactice({inventee: 404})
+    d = watch.veille_site("exemple", _site(), http, lambda m: None, AUJOURD_HUI)["a_rediriger"][0]
+    assert d["sure"] and d["cible_proposee"] == "/blogs/news/vitamine-b12-effet-immediat"
+    assert http.titres_lus == []
 
 
 def test_une_seule_lecture_des_7_derniers_jours_en_donnees_fraiches(monkeypatch):

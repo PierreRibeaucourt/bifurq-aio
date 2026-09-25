@@ -70,7 +70,8 @@ des services d'API Google</a>, y compris les exigences d'utilisation limitée.</
 <ul>
 <li>la connexion Google de chaque site (<code>config\&lt;site&gt;\jeton_gsc.json</code>), qui permet à l'outil
 de relancer l'analyse sans vous redemander de vous connecter ;</li>
-<li>les résultats d'inspection et de vérification des adresses, gardés pour ne pas refaire les mêmes demandes ;</li>
+<li>les résultats d'inspection et de vérification des adresses, et les titres des pages lues, gardés pour ne pas
+refaire les mêmes demandes ;</li>
 <li>les rapports d'analyse des 60 derniers jours, et un journal technique de fonctionnement.</li>
 </ul>
 <p>Ces fichiers ne sont envoyés nulle part. Toute personne qui utilise votre session peut les lire :
@@ -81,7 +82,8 @@ protégez l'accès à votre ordinateur comme pour n'importe quel autre fichier p
 <li><b>Vers Google</b> : les demandes nécessaires à l'analyse, adressées à l'API Search Console avec votre propre
 connexion.</li>
 <li><b>Vers votre propre site</b> : une visite de chaque adresse suspecte, pour vérifier qu'elle répond bien en
-erreur (<a href="fonctionnement.html#verification">comment l'outil vérifie une adresse</a>).</li>
+erreur (<a href="fonctionnement.html#verification">comment l'outil vérifie une adresse</a>). Pour trouver la page
+vers laquelle rediriger une adresse, l'outil visite aussi jusqu'à 5 pages de votre plan de site et lit leur titre.</li>
 <li><b>Vers DataForSEO, seulement si vous l'avez choisi</b> : si vous renseignez vos propres identifiants
 DataForSEO dans les réglages avancés, la même vérification passe par ce service, qui reçoit alors les adresses à
 vérifier. Ce transfert se fait avec votre propre compte DataForSEO et relève de ses conditions.</li>

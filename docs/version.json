@@ -1,4 +1,4 @@
 {
-  "version": "0.5.1",
-  "nouveautes": "Sur Mac et sous Linux, l'outil s'installe aussi par un double-clic : application pour Mac, paquets .deb et .rpm pour Linux."
+  "version": "0.5.2",
+  "nouveautes": "L'outil compare aussi l'adresse inventée au titre des pages de votre site. Il trouve ainsi la bonne page quand l'IA de Google a fabriqué l'adresse à partir de ce titre."
 }

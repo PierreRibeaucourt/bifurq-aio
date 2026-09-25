@@ -122,3 +122,18 @@ PAGE_AKAMAI = ("<HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>A
 def test_akamai_reconnu_meme_avec_une_page_encodee():
     assert http_check.protection(403, [("Content-Type", "text/html")], PAGE_AKAMAI) == "Akamai"
     assert http_check.protection(403, [("Server-Timing", "ak_p; desc=\"1_2_3\";dur=1")], "") == "Akamai"
+
+
+def test_titres_d_une_page_du_site():
+    page = ("<html><head><meta charset='iso-8859-1'><title>Caf\xe9 : bienfaits | Mon site</title></head>"
+            "<body>" + "<a>menu</a>" * 50000 + "<h1>Le caf\xe9</h1></body></html>").encode("iso-8859-1")
+    s = _Serveur({"/page": (200, {"Content-Type": "text/html; charset=iso-8859-1"}, page),
+                  "/image": (200, {"Content-Type": "image/png"}, b"\x89PNG"),
+                  "/bloquee": (403, {"Content-Type": "text/html"}, b"<title>Just a moment...</title>")})
+    try:
+        c = http_check.ControleurHTTP()
+        lire = lambda chemin: c.lire_titres("http://127.0.0.1:%d%s" % (s.port, chemin))
+        assert lire("/page") == ["Café : bienfaits | Mon site", "Café : bienfaits", "Le café"]
+        assert lire("/image") is None and lire("/bloquee") is None and lire("/absente") is None
+    finally:
+        s.arreter()
