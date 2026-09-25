@@ -1,4 +1,4 @@
 {
-  "version": "0.5.3",
-  "nouveautes": "L'outil lit les plans de site de WordPress (All in One SEO) et de PrestaShop, qu'il prenait à tort pour vides."
+  "version": "0.5.4",
+  "nouveautes": "Quand vous ajoutez des sites, l'analyse lancée porte seulement sur ces sites."
 }
