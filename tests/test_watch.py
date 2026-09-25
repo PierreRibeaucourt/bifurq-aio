@@ -30,6 +30,7 @@ def _racine_isolee(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "racine", lambda: str(tmp_path))
     # jamais de vraie requête vers les sites d'exemple
     monkeypatch.setattr("veille_ia.http_check.ControleurHTTP.lire_titres", lambda self, url: None)
+    monkeypatch.setattr(watch, "CADENCE_INSPECTIONS", 0)       # cadence de Google : pas en test
 
 
 def _site(seuil=15):
@@ -516,3 +517,120 @@ def test_analyse_planifiee_annulee_previent_des_sites_finis(monkeypatch):
     for cle in {"a", "b", "c"} - {fini}:
         assert not os.path.exists(os.path.join(config.dossier_site(cle), "veille_deja_alertees.json"))
     assert r["rapport"] and os.path.exists(r["rapport"])
+
+
+# --- inspections : limite du jour, priorités, cadence ---
+def _inspections_notees(monkeypatch, coverage=gsc_api.INCONNUE):
+    notees = []
+
+    def inspecter(chemin, url, propriete):
+        notees.append((url, __import__("time").time()))
+        return {"url": url, "http": 200, "coverage": coverage(url) if callable(coverage) else coverage}
+    monkeypatch.setattr(gsc_api, "inspecter", inspecter)
+    return notees
+
+
+BLOG = "https://exemple.fr/blogs/news/"
+
+
+def test_inspections_d_abord_pour_les_adresses_assez_vues(monkeypatch):
+    """Le seuil vaut pour l'adresse, toutes variantes comprises : "e" et "e/" (8 + 8) passent
+    avant "c" (14), qui ne peut pas devenir une adresse à corriger."""
+    lignes = [{"URL": BLOG + n, "Impressions": v} for n, v in (("a", 20), ("c", 14), ("e", 8), ("e/", 8), ("d", 13))]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    notees = _inspections_notees(monkeypatch)
+    monkeypatch.setattr(watch, "INSPECTIONS_PAR_JOUR", 3)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert sorted(u for u, _ in notees) == [BLOG + "a", BLOG + "e", BLOG + "e/"]
+    assert r["anomalies"] == []                    # seules des adresses sous le seuil attendent : rien à signaler
+
+
+def test_limite_d_inspections_comptee_sur_toute_la_journee(monkeypatch):
+    lignes = [{"URL": BLOG + n, "Impressions": 20} for n in "abc"]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    notees = _inspections_notees(monkeypatch, "Envoyée et indexée")
+    monkeypatch.setattr(watch, "INSPECTIONS_PAR_JOUR", 2)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert len(notees) == 2
+    assert any("1 adresse vue au moins 15 fois reste à vérifier" in a and "suite demain" in a for a in r["anomalies"])
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert len(notees) == 2                                            # limite du jour déjà atteinte
+    assert any("1 adresse vue au moins 15 fois reste à vérifier" in a for a in r["anomalies"])
+    demain = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, demain)
+    assert len(notees) == 3 and r["anomalies"] == []
+
+
+def test_adresse_comptee_une_fois_toutes_variantes_comprises(monkeypatch):
+    lignes = [{"URL": BLOG + n, "Impressions": v} for n, v in (("a", 20), ("e", 8), ("e/", 8))]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    _inspections_notees(monkeypatch, "Envoyée et indexée")
+    monkeypatch.setattr(watch, "INSPECTIONS_PAR_JOUR", 1)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert any(a.startswith("1 adresse vue au moins 15 fois reste à vérifier") for a in r["anomalies"])
+
+
+def test_echec_sur_une_adresse_assez_vue_toujours_signale(monkeypatch):
+    """Même noyé dans un lot d'adresses sous le seuil qui se vérifient bien (moins de 10 % d'échecs)."""
+    lignes = [{"URL": BLOG + "vue", "Impressions": 50}] + [{"URL": BLOG + "p%d" % i, "Impressions": 2} for i in range(30)]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    monkeypatch.setattr(gsc_api, "inspecter", lambda chemin, url, propriete: (
+        {"url": url, "http": None, "erreur": "réseau"} if url.endswith("/vue")
+        else {"url": url, "http": 200, "coverage": "Envoyée et indexée"}))
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert any(a.startswith("Google n'a pas pu vérifier 1 adresse aujourd'hui") for a in r["anomalies"])
+
+
+def test_echecs_d_affilee_arretent_les_inspections_sans_user_la_limite(monkeypatch):
+    lignes = [{"URL": BLOG + "u%d" % i, "Impressions": 20} for i in range(40)]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    tentees = []
+    monkeypatch.setattr(gsc_api, "inspecter", lambda chemin, url, propriete: tentees.append(url) or {
+        "url": url, "http": None, "erreur": "quota"})
+    monkeypatch.setattr(watch, "INSPECTIONS_PAR_JOUR", 100)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert watch.ECHECS_A_LA_SUITE <= len(tentees) <= watch.ECHECS_A_LA_SUITE + 5     # 6 fils déjà partis
+    assert any(a.startswith("Google n'a pas pu vérifier 40 adresses") for a in r["anomalies"])
+    assert not any("suite demain" in a for a in r["anomalies"])        # la limite du jour reste entière
+    avant = len(tentees)
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert len(tentees) > avant                                        # nouvel essai dès l'analyse suivante
+
+
+def test_inspections_espacees_sous_la_limite_par_minute_de_google(monkeypatch):
+    """Les 6 fils partagent une seule file de départs : attentes 0, 0,05, 0,10... sur une horloge
+    figée, sans dépendre de la charge de la machine."""
+    import types
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, [{"URL": BLOG + str(i), "Impressions": 20} for i in range(8)])
+    _inspections_notees(monkeypatch)
+    attentes = []
+    monkeypatch.setattr(watch, "CADENCE_INSPECTIONS", 0.05)
+    monkeypatch.setattr(watch, "time", types.SimpleNamespace(monotonic=lambda: 1000.0, time=__import__("time").time,
+                                                             sleep=attentes.append))
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert sorted(attentes) == pytest.approx([i * 0.05 for i in range(8)])
+
+
+def test_vraies_pages_absentes_du_plan_de_site_signalees(monkeypatch):
+    lignes = [{"URL": BLOG + n, "Impressions": v} for n, v in (("fr-un", 30), ("fr-deux", 20), ("fr-trois", 18))]
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, lignes)
+    _inspections_notees(monkeypatch, lambda u: "Explorée, actuellement non indexée" if u.endswith("trois")
+                        else "Envoyée et indexée")
+    monkeypatch.setattr(watch, "PAGES_HORS_PLAN_A_SIGNALER", 2)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert any(i.startswith("Google montre 2 pages de votre site absentes du plan de site, par exemple "
+                            "/blogs/news/fr-un.") for i in r["infos"])
+    monkeypatch.setattr(watch, "PAGES_HORS_PLAN_A_SIGNALER", 3)
+    r = watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert not any("absentes du plan de site" in i for i in r["infos"])
+
+
+def test_inspections_en_echec_n_usent_pas_la_limite_du_jour(monkeypatch):
+    _simuler(monkeypatch, {BLOG + "vraie-page"}, [{"URL": BLOG + n, "Impressions": 20} for n in "abc"])
+    tentees = []
+    monkeypatch.setattr(gsc_api, "inspecter", lambda chemin, url, propriete: tentees.append(url) or {
+        "url": url, "http": None, "erreur": "réseau"})
+    monkeypatch.setattr(watch, "INSPECTIONS_PAR_JOUR", 2)
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    watch.veille_site("exemple", _site(), _ControleurHTTPFactice({}), lambda m: None, AUJOURD_HUI)
+    assert len(tentees) == 4

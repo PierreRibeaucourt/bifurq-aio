@@ -32,6 +32,7 @@ import io
 import json
 import os
 import re
+import threading
 import time
 import traceback
 
@@ -39,7 +40,13 @@ from . import config, gsc_api, matching, plateforme, report, sitemap, urls
 from .erreurs import ErreurDonnees, ErreurPlanDeSite, expliquer
 from .http_check import ERREURS, ControleurHTTP, corrigee
 
-MAX_INSPECTIONS = 300              # par site et par jour ; quota Google : 2 000
+INSPECTIONS_PAR_JOUR = 1000        # adresses vérifiées par site et par jour, toutes analyses du jour
+                                   # comprises. Quota de Google : 2 000 par jour et par site, le reste
+                                   # pour les autres outils branchés sur la même Search Console
+CADENCE_INSPECTIONS = 0.125        # secondes entre deux inspections : 480 par minute au plus,
+                                   # sous les 600 par minute et par site de Google
+PAGES_HORS_PLAN_A_SIGNALER = 50    # vraies pages absentes du plan de site : au-delà, le dire
+ECHECS_A_LA_SUITE = 5              # inspections en échec d'affilée (quota de Google, réseau) : arrêt
 RECONTROLE_CORRIGEES = 7           # jours entre deux tests d'une adresse déjà corrigée
 DUREE_MAX = 90 * 60                # au-delà, les sites restants sont reportés
 VERROU_MAX = 3 * 3600              # un verrou plus vieux est celui d'une analyse morte
@@ -298,17 +305,41 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
             variantes[urls.cle_chemin(u)].add(u)
     actifs = {urls.cle_chemin(u) for u in recent if hors_plan(u)}
 
-    # inspection des variantes actives jamais inspectées
+    # inspection des variantes actives jamais inspectées, dans la limite du jour : d'abord celles
+    # dont l'adresse est assez vue pour être à corriger, les plus vues en tête. Les autres ne
+    # servent qu'au décompte des adresses inventées sous le seuil, avec ce qui reste de la limite.
+    seuil = cfg["seuil_impressions"]
+    vues = {p: sum(recent[u] for u in variantes[p]) for p in actifs}
     CI = os.path.join(D, "inspection.jsonl")
     insp_tout = _lire_jsonl(CI)
     insp = {u: x for u, x in insp_tout.items() if x.get("http") == 200}
-    file_ = sorted({u for p in actifs for u in variantes[p] if u in recent and u not in insp}, key=lambda u: -recent[u])
-    a_inspecter, reportees = file_[:MAX_INSPECTIONS], max(0, len(file_) - MAX_INSPECTIONS)
+    file_ = sorted({u for p in actifs for u in variantes[p] if u not in insp},
+                   key=lambda u: (vues[urls.cle_chemin(u)] < seuil, -recent[u], u))
+    # seules les inspections réussies comptent (une adresse vérifiée ne l'est plus jamais) : un
+    # échec (réseau, quota) n'use pas la limite, et ECHECS_A_LA_SUITE borne les nouveaux essais
+    faites = sum(1 for x in insp_tout.values() if x.get("veille") == aujourd_hui and x.get("http") == 200)
+    a_inspecter = file_[:max(0, INSPECTIONS_PAR_JOUR - faites)]
     codes_insp = collections.Counter()
+    cadence, prochaine, echecs_suite = threading.Lock(), [0.0], [0]
 
     def inspecter(u):
-        # après une annulation, les inspections pas encore parties ne partent plus (None)
-        return None if _annulee() else gsc_api.inspecter(chemin_jeton, u, cfg["propriete"])
+        # après une annulation, les inspections pas encore parties ne partent plus (None) ; après
+        # ECHECS_A_LA_SUITE échecs d'affilée, plus aucune ne part (non_tentee) ; sinon une toutes
+        # les CADENCE_INSPECTIONS secondes au plus, tous fils confondus
+        if _annulee():
+            return None
+        with cadence:
+            if echecs_suite[0] >= ECHECS_A_LA_SUITE:
+                return {"url": u, "http": None, "non_tentee": True}
+            depart = max(time.monotonic(), prochaine[0])
+            prochaine[0] = depart + CADENCE_INSPECTIONS
+        time.sleep(max(0.0, depart - time.monotonic()))
+        if _annulee():
+            return None
+        x = gsc_api.inspecter(chemin_jeton, u, cfg["propriete"])
+        with cadence:
+            echecs_suite[0] = 0 if x.get("http") == 200 else echecs_suite[0] + 1
+        return x
     verifier_annulation()
     sautees = 0
     if a_inspecter:
@@ -319,6 +350,8 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                     sautees += 1
                     continue
                 codes_insp[x.get("http")] += 1
+                if x.get("non_tentee"):
+                    continue
                 f.write(json.dumps(dict(x, veille=aujourd_hui), ensure_ascii=False) + "\n")
                 f.flush()
                 insp_tout[x["url"]] = x
@@ -327,15 +360,38 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     if sautees:                                # des adresses pas vérifiées : jamais un site complet
         raise AnalyseAnnulee()
     verifier_annulation()
-    echecs_insp = sum(n for c, n in codes_insp.items() if c != 200)
-    if codes_insp.get(403) or echecs_insp > 0.1 * max(1, len(a_inspecter)):
+    # une adresse assez vue pour être à corriger et pas vérifiée est toujours signalée ; les
+    # autres, qui ne servent qu'au décompte sous le seuil, au-delà de 10 % d'échecs. Décompte par
+    # adresse, toutes variantes comprises, comme les adresses à corriger.
+    echouees = {urls.cle_chemin(u) for u in a_inspecter if u not in insp}
+    echouees_seuil = {p for p in echouees if vues[p] >= seuil}
+    # un échec n'use pas la limite du jour : il reste toujours de quoi réessayer à l'analyse suivante
+    if codes_insp.get(403) or echouees_seuil or len(echouees) > 0.1 * max(1, len(a_inspecter)):
         journal("   inspections en échec : %s" % dict(codes_insp))
         anomalies.append("Google n'a pas pu vérifier %d adresse%s aujourd'hui : nouvel essai à la "
-                         "prochaine analyse." % (echecs_insp, "s" if echecs_insp > 1 else ""))
+                         "prochaine analyse." % (len(echouees), "s" if len(echouees) > 1 else ""))
+    reportees = len({urls.cle_chemin(u) for u in file_[len(a_inspecter):]
+                     if vues[urls.cle_chemin(u)] >= seuil} - echouees_seuil)
     if reportees:
-        anomalies.append("%d adresses restent à vérifier (limite quotidienne de Google atteinte) : "
-                         "suite à la prochaine analyse." % reportees)
+        s = "s" if reportees > 1 else ""
+        anomalies.append("%d adresse%s vue%s au moins %d fois reste%s à vérifier auprès de Google (%s "
+                         "adresses vérifiées par jour et par site au plus) : suite demain."
+                         % (reportees, s, s, seuil, "nt" if reportees > 1 else "",
+                            "{:,}".format(INSPECTIONS_PAR_JOUR).replace(",", "\xa0")))
     _compacter(CI, insp_tout)
+
+    # de vraies pages absentes du plan de site : chacune coûte une vérification auprès de Google
+    def indexee(x):
+        c = ((x or {}).get("coverage") or "").lower()
+        return "indexée" in c and "non indexée" not in c
+    connues = sorted((p for p in actifs if any(indexee(insp.get(u)) for u in variantes[p])), key=lambda p: (-vues[p], p))
+    if len(connues) >= PAGES_HORS_PLAN_A_SIGNALER:
+        exemple = urls.chemin(max(sorted(variantes[connues[0]]), key=lambda u: recent[u]))
+        infos.append("Google montre %d pages de votre site absentes du plan de site, par exemple %s. Chaque "
+                     "nouvelle page absente du plan de site demande une vérification auprès de Google, dans la limite "
+                     "de %s par jour. Ajoutez-les au plan de site, ou ajoutez les plans de site qui manquent dans "
+                     "Modifier ce site." % (len(connues), exemple,
+                                            "{:,}".format(INSPECTIONS_PAR_JOUR).replace(",", "\xa0")))
 
     ecartes = {urls.cle_chemin(p) for p in config.lire_ecartees(cle)}
     inventes = {p for p in actifs if any((insp.get(u) or {}).get("coverage") == INCONNUE for u in variantes[p])}

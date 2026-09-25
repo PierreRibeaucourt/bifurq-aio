@@ -1,4 +1,4 @@
-__version__ = "0.5.5"
+__version__ = "0.5.6"
 
 # certificats HTTPS du Python de python.org sur macOS : voir plateforme.preparer_certificats
 from . import plateforme as _plateforme  # noqa: E402
