@@ -1,4 +1,4 @@
 {
-  "version": "0.5.5",
-  "nouveautes": "Un bouton Annuler l'analyse arrête une analyse en cours. Les sites déjà analysés gardent leurs nouveaux résultats."
+  "version": "0.5.6",
+  "nouveautes": "L'outil vérifie auprès de Google d'abord les adresses assez vues pour être à corriger, jusqu'à 1\u00a0000 par jour et par site. Il signale un plan de site qui oublie beaucoup de vraies pages."
 }
