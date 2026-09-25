@@ -8,7 +8,8 @@ Le process, pour chaque site :
      quelques jours tout au plus, relevé du 24.09.2026 sur 423 adresses), absentes du
      plan de site, que Google n'a jamais explorées (donc inventées), et qui répondent
      en erreur (404 ou 410) ;
-  2. chercher, parmi les pages du plan de site, celle qui leur ressemble ;
+  2. chercher, parmi les pages du plan de site, celle qui leur ressemble, par son
+     adresse ou par son titre ;
   3. si une page ressemble assez, la proposer en redirection ; sinon, prévenir
      seulement.
 
@@ -44,6 +45,9 @@ MIN_PAGES_REFERENCE = 20           # en dessous, pas de détection de chute brut
 SEUIL_PROPOSITION = 0.6            # ressemblance minimale pour proposer une page (calé le
                                    # 24.09.2026 sur un vrai site : 0,57 menait à une page sans rapport)
 SEUIL_SURE, ECART_SUR = 0.75, 0.1  # correspondance sûre : score et avance sur la 2e
+TITRES_A_LIRE = 5                  # pages les plus proches dont on lit les titres quand l'adresse
+                                   # ne suffit pas (la bonne était 1re ou 2e sur 12 vrais cas)
+VALIDITE_TITRES = 30               # jours avant de relire les titres d'une page
 INCONNUE = gsc_api.INCONNUE
 
 
@@ -316,11 +320,32 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                          "erreur du serveur) : nouvel essai à la prochaine analyse."
                          % (n, "s" if n > 1 else "", "ont" if n > 1 else "a", "s" if n > 1 else ""))
 
-    # recherche d'une page similaire : proposée seulement si elle ressemble assez
+    # recherche d'une page similaire, par son adresse puis, si l'adresse ne suffit pas, par
+    # les titres des pages les plus proches : proposée seulement si elle ressemble assez
     a_rediriger = []
     exclues = resolues | {x["chemin"] for x in non_controlees}
     if any(p not in exclues for p in suspects):
         etape("Recherche de pages similaires")
+    CT = os.path.join(D, "titres.jsonl")
+    titres = _lire_jsonl(CT)
+    limite_titres = (datetime.date.today() - datetime.timedelta(days=VALIDITE_TITRES)).isoformat()
+
+    def slug_de(u):
+        return matching.plie(urls.chemin(u).rsplit("/", 1)[-1])
+
+    def textes(v):
+        t = titres.get(v) or {}
+        # une page illisible (None) est réessayée le lendemain, une page lue au bout de 30 jours
+        if not (t.get("veille") == aujourd_hui or (t.get("textes") is not None and t.get("veille", "") >= limite_titres)):
+            t = {"url": v, "veille": aujourd_hui, "textes": controleur_http.lire_titres(v)}
+            with io.open(CT, "a", encoding="utf-8") as f:
+                f.write(json.dumps(t, ensure_ascii=False) + "\n")
+            titres[v] = t
+        return t["textes"] or []
+
+    def sure(notes):
+        return notes[0][0] >= SEUIL_SURE and notes[0][0] - (notes[1][0] if len(notes) > 1 else 0.0) >= ECART_SUR
+
     for p, us in suspects.items():
         if p in exclues:
             continue
@@ -329,17 +354,20 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
             continue
         sec = urls.chemin(exemple).rsplit("/", 1)[0]
         pool = [v for v in plan if urls.chemin(v).rsplit("/", 1)[0] == sec] or list(plan)
-        slug = matching.plie(urls.chemin(exemple).rsplit("/", 1)[-1])
-        notes = sorted(((matching.ressemblance(slug, matching.plie(urls.chemin(v).rsplit("/", 1)[-1])), v)
-                        for v in pool), reverse=True)[:2]
+        slug = slug_de(exemple)
+        notes = sorted(((matching.ressemblance(slug, slug_de(v)), v) for v in pool), reverse=True)
+        if notes and not sure(notes):
+            notes[:TITRES_A_LIRE] = [(matching.ressemblance_page(slug, slug_de(v), textes(v)), v)
+                                     for _, v in notes[:TITRES_A_LIRE]]
+            notes.sort(reverse=True)
         score = notes[0][0] if notes else 0.0
-        ecart = score - (notes[1][0] if len(notes) > 1 else 0.0)
         cible = notes[0][1] if notes and score >= SEUIL_PROPOSITION else ""
         a_rediriger.append({"chemin": urls.chemin(exemple), "cle": p, "adresse": exemple,
                             "impressions": sum(recent[u] for u in us),
                             "cible_url": cible, "cible_proposee": urls.chemin(cible) if cible else "",
-                            "sure": bool(cible) and score >= SEUIL_SURE and ecart >= ECART_SUR,
+                            "sure": bool(cible) and sure(notes),
                             "ressemblance": round(score, 2)})
+    _compacter(CT, titres)
     a_rediriger.sort(key=lambda d: -d["impressions"])
     if sous_seuil:
         s = "s" if sous_seuil > 1 else ""

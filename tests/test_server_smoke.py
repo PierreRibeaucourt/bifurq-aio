@@ -167,7 +167,7 @@ def _reconnecter(port, monkeypatch, cle, proprietes_du_compte):
 
 
 def _deux_sites_connectes():
-    for cle, propriete in (("empirik-fr", "sc-domain:empirik.fr"), ("datagalaxy-com", "sc-domain:datagalaxy.com")):
+    for cle, propriete in (("agence-fr", "sc-domain:agence.fr"), ("client-com", "sc-domain:client.com")):
         config.ajouter_site(cle, nom=propriete.split(":")[1], propriete=propriete, sitemaps=[])
         with open(config.chemin_jeton(cle), "w", encoding="utf-8") as f:
             f.write('{"refresh_token": "ancien-%s"}' % cle)
@@ -180,19 +180,19 @@ def _jeton(cle):
 
 def test_reconnecter_avec_un_compte_sans_acces_au_site_ne_change_rien(serveur, monkeypatch):
     _deux_sites_connectes()
-    code, corps, _ = _reconnecter(serveur, monkeypatch, "datagalaxy-com", ["sc-domain:empirik.fr"])
-    assert "Mauvais compte Google" in corps and "datagalaxy.com" in corps
-    assert "ancien-datagalaxy-com" in _jeton("datagalaxy-com")
-    assert "ancien-empirik-fr" in _jeton("empirik-fr")          # pas remplacée en silence
+    code, corps, _ = _reconnecter(serveur, monkeypatch, "client-com", ["sc-domain:agence.fr"])
+    assert "Mauvais compte Google" in corps and "client.com" in corps
+    assert "ancien-client-com" in _jeton("client-com")
+    assert "ancien-agence-fr" in _jeton("agence-fr")          # pas remplacée en silence
     assert not os.path.exists(server._chemin_temp())
 
 
 def test_reconnecter_avec_le_bon_compte_met_a_jour_les_sites_accessibles(serveur, monkeypatch):
     _deux_sites_connectes()
-    code, _, lieu = _reconnecter(serveur, monkeypatch, "datagalaxy-com", ["sc-domain:datagalaxy.com"])
+    code, _, lieu = _reconnecter(serveur, monkeypatch, "client-com", ["sc-domain:client.com"])
     assert (code, lieu) == (302, "/")
-    assert "nouveau-compte" in _jeton("datagalaxy-com")
-    assert "ancien-empirik-fr" in _jeton("empirik-fr")          # ce compte ne le voit pas
+    assert "nouveau-compte" in _jeton("client-com")
+    assert "ancien-agence-fr" in _jeton("agence-fr")          # ce compte ne le voit pas
 
 
 @pytest.mark.skipif(os.name != "nt", reason="partage de port propre à Windows")

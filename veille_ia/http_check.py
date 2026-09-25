@@ -11,7 +11,9 @@ Deux voies, choisies par site :
     reconnue (Cloudflare, DataDome...), on la nomme pour dire à l'utilisateur quoi faire ;
   - si l'utilisateur fournit ses propres identifiants DataForSEO, un contrôle par ce
     service, plus robuste contre les pare-feux, cadencé
-    à 12 appels par minute au plus (limite du compte DataForSEO, quel qu'il soit)."""
+    à 12 appels par minute au plus (limite du compte DataForSEO, quel qu'il soit).
+
+Lit aussi les titres des vraies pages candidates à une redirection (lire_titres)."""
 import base64
 import html
 import json
@@ -19,13 +21,14 @@ import time
 import urllib.error
 import urllib.request
 
-from . import __version__
+from . import __version__, matching
 
-UA = {"User-Agent": "Bifurq-AIO/%s (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses "
+UA ={"User-Agent": "Bifurq-AIO/%s (+https://github.com/PierreRibeaucourt/bifurq-aio ; outil local, verifie ses "
                     "propres pages)" % __version__}
 DELAI_COURTOISIE = 1.5
 DATAFORSEO_URL = "https://api.dataforseo.com/v3/on_page/instant_pages"
 ERREURS = (404, 410)               # l'adresse n'existe pas : à rediriger
+TAILLE_MAX_PAGE = 2_000_000        # octets lus d'une page pour ses titres
 
 # Protections anti-robots : ce qui les trahit dans les en-têtes ou dans le début de la
 # page qu'elles renvoient à la place du site (en minuscules).
@@ -98,6 +101,20 @@ class ControleurHTTP:
             return r
         except Exception as e:
             return {"code": None, "erreur": str(e)[:150]}
+
+    def lire_titres(self, url):
+        """Titres d'une page du site (voir matching.textes_de_page), toujours par une
+        requête directe, ou None si la page ne s'affiche pas. Lus jusqu'à 2 Mo : le <h1>
+        d'une page Shopify arrive après 500 Ko de menus."""
+        time.sleep(DELAI_COURTOISIE)
+        try:
+            r = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30)
+            if "html" not in (r.headers.get_content_type() or ""):
+                return None
+            return matching.textes_de_page(r.read(TAILLE_MAX_PAGE).decode(r.headers.get_content_charset() or "utf-8",
+                                                                          "replace"))
+        except Exception:
+            return None
 
     def _controler_dataforseo(self, url):
         if self._appels >= self.max_appels:

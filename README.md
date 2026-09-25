@@ -14,7 +14,8 @@ Il fonctionne sous Windows, macOS et Linux.
 1. il cherche les adresses de votre site qui remplissent quatre conditions : Google les a
    affichées au moins 15 fois ces 7 derniers jours, jusqu'à la veille ; elles sont absentes du plan
    de site ; Google ne les a jamais explorées ; elles répondent en erreur 404 ou 410 ;
-2. il cherche dans votre plan de site la page qui ressemble le plus à chaque adresse inventée ;
+2. il cherche dans votre plan de site la page qui ressemble le plus à chaque adresse inventée, par
+   son adresse ou par son titre ;
 3. il propose cette page comme destination de la redirection quand elle est assez proche. Vous
    choisissez la destination quand aucune page ne ressemble assez.
 
@@ -122,7 +123,8 @@ dossier `rapports` à côté.
 
 - Vers l'API Google Search Console : les requêtes nécessaires à l'analyse. Elles portent sur des
   données déjà visibles dans votre Search Console.
-- Vers votre propre site : une requête par adresse pour vérifier qu'elle répond bien en erreur.
+- Vers votre propre site : une requête par adresse pour vérifier qu'elle répond bien en erreur, et
+  la lecture du titre de 5 pages au plus pour trouver celle vers laquelle la rediriger.
 - Vers DataForSEO si vous avez renseigné vos identifiants (facultatif) : la même vérification.
   Elle sert quand votre site bloque les requêtes venues de votre ordinateur.
 - Vers GitHub, qui héberge le site de l'outil : la lecture du numéro de la dernière version une
