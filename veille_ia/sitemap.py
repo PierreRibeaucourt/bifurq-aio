@@ -39,17 +39,21 @@ def _protection(erreur):
     return protection(erreur.code, (erreur.headers or {}).items(), debut)
 
 
-def plan_de_site(racines, journal, strict=False):
+def plan_de_site(racines, journal, strict=False, verifier=None):
     """strict=True : un sous-plan en erreur ou dont la réponse n'est manifestement pas
     un sitemap fait échouer l'appel, au lieu de rendre un plan incomplet qui ferait
     passer des pages réelles pour inventées (ou l'inverse). Un sitemap XML sans
     aucune <loc> reste légitime (type de contenu vide) : seule une réponse qui ne
-    ressemble à aucun des deux formats attendus est une erreur."""
+    ressemble à aucun des deux formats attendus est une erreur.
+    verifier : appelé avant chaque fichier, il peut lever une exception pour arrêter la
+    lecture (analyse annulée)."""
     pages, vus, file_ = set(), set(), list(racines)
     while file_ and len(vus) < 300:
         u = file_.pop(0)
         if u in vus:
             continue
+        if verifier:
+            verifier()
         vus.add(u)
         try:
             x = lire_url(u)

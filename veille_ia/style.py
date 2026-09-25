@@ -147,8 +147,11 @@ button:focus-visible{outline:2px solid var(--noir);outline-offset:2px;box-shadow
   background:var(--noir);color:#fff;border-radius:4px;overflow:hidden}
 .chantier::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;
   background:repeating-linear-gradient(-45deg,var(--jaune) 0 12px,var(--noir) 12px 24px)}
-.chantier p{margin:0}
+.chantier p{margin:0;flex:1 1 16em}
 .chantier .roue{color:var(--jaune)}
+.chantier{flex-wrap:wrap}
+.chantier .bouton.secondaire{border-color:#fff}
+.chantier .bouton.secondaire:hover{background:var(--jaune);border-color:var(--jaune);color:var(--noir)}
 .roue{flex:none;display:inline-block;width:14px;height:14px;border:2px solid currentColor;
   border-right-color:transparent;border-radius:50%;animation:tourne .8s linear infinite}
 @keyframes tourne{to{transform:rotate(360deg)}}
@@ -404,6 +407,14 @@ def logo(taille=28):
 FAVICON = "data:image/svg+xml," + urllib.parse.quote(logo(64).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"'))
 
 
+SCRIPT_RAFRAICHIR = r"""(function(){var clavier=false;
+document.addEventListener('keydown',function(ev){if(ev.key==='Tab')clavier=true;});
+document.addEventListener('mousedown',function(){clavier=false;});
+function occupe(){var a=document.activeElement;if(!a||a===document.body)return false;
+return clavier||a.tagName==='INPUT'||a.tagName==='TEXTAREA';}
+(function boucle(){setTimeout(function(){if(occupe())boucle();else location.reload();},%d);})();})();"""
+
+
 def gabarit(titre, corps, rafraichir=None, navigation=True, script="", onglet=None):
     """Page complète. rafraichir : secondes avant rechargement automatique.
     navigation=False : rapport ouvert en fichier, aucun lien vers l'outil.
@@ -415,7 +426,12 @@ def gabarit(titre, corps, rafraichir=None, navigation=True, script="", onglet=No
             for nom, href, texte in (("sites", "/", "Mes sites"), ("reglages", "/reglages", "Réglages")))
     else:
         marque, nav = '<div class="marque">%s<span>%s</span></div>' % (logo(), NOM_OUTIL), ""
-    meta = '<meta http-equiv="refresh" content="%d">' % rafraichir if rafraichir else ""
+    meta = ""
+    if rafraichir:
+        # rechargement par script, qui attend tant que l'on écrit ou que l'on parcourt la page au
+        # clavier (un bouton comme Annuler doit rester atteignable) ; sans script, par la balise
+        meta = '<noscript><meta http-equiv="refresh" content="%d"></noscript>' % rafraichir
+        script = (script or "") + SCRIPT_RAFRAICHIR % (rafraichir * 1000)
     return ("""<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">%s
 <title>%s</title><link rel="icon" href="%s"><style>%s</style></head><body>
