@@ -1,4 +1,4 @@
 {
-  "version": "0.5.4",
-  "nouveautes": "Quand vous ajoutez des sites, l'analyse lancée porte seulement sur ces sites."
+  "version": "0.5.5",
+  "nouveautes": "Un bouton Annuler l'analyse arrête une analyse en cours. Les sites déjà analysés gardent leurs nouveaux résultats."
 }

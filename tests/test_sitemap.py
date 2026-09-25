@@ -18,19 +18,21 @@ PAGE_BLOCAGE = b"<html><body>Acces refuse (pare-feu)</body></html>"
 class _Serveur:
     def __init__(self, routes):
         self.routes = routes
+        self.demandes = []
         self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), self._handler())
         self.port = self.httpd.server_port
         self.fil = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.fil.start()
 
     def _handler(self):
-        routes = self.routes
+        routes, demandes = self.routes, self.demandes
 
         class H(http.server.BaseHTTPRequestHandler):
             def log_message(self, *a):
                 pass
 
             def do_GET(self):
+                demandes.append(self.path)
                 corps, type_contenu, gzippe = routes.get(self.path, (None, None, False))
                 if corps is None:
                     self.send_response(404)
@@ -194,3 +196,24 @@ def test_adresses_illisibles_levent_une_erreur_en_strict(journal):
             sitemap.plan_de_site(["http://127.0.0.1:%d/sitemap.xml" % s.port], journal, strict=True)
     finally:
         s.arreter()
+
+
+def test_lecture_arretee_entre_deux_fichiers(journal):
+    s = _Serveur({})
+    s.routes["/sitemap.xml"] = (INDEX.replace(b"%PORT%", str(s.port).encode()), "application/xml", False)
+    s.routes["/sous-plan.xml"] = (SOUS_PLAN.replace(b"%PORT%", str(s.port).encode()), "application/xml", False)
+    lus = []
+
+    class Annulee(Exception):
+        pass
+
+    def verifier():
+        if lus:
+            raise Annulee()
+        lus.append(1)
+    try:
+        with pytest.raises(Annulee):
+            sitemap.plan_de_site(["http://127.0.0.1:%d/sitemap.xml" % s.port], journal, strict=True, verifier=verifier)
+    finally:
+        s.arreter()
+    assert lus == [1] and s.demandes == ["/sitemap.xml"]      # le sous-plan jamais demandé

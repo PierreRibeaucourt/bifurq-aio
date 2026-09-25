@@ -15,6 +15,7 @@ from veille_ia.installer import server
 @pytest.fixture
 def serveur(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "racine", lambda: str(tmp_path))
+    monkeypatch.setitem(server._session, "annulation", False)
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     try:
@@ -355,3 +356,79 @@ def test_analyser_un_site_retire_ne_lance_rien(serveur, monkeypatch):
     code, _, lieu = _requete(serveur, "POST", "/analyser", [("jeton", server._session["jeton_formulaire"]),
                                                             ("cle", "disparu")])
     assert code == 303 and lieu == "/" and lancees == []
+
+
+# --- bouton Annuler ---
+def test_annuler_une_analyse_en_cours(serveur, monkeypatch):
+    _deux_sites()
+    en_cours = [True]
+    monkeypatch.setattr(server, "analyse_active", lambda: en_cours[0])
+    monkeypatch.setattr(watch, "analyse_en_cours", lambda: en_cours[0])
+    jeton = ("jeton", server._session["jeton_formulaire"])
+
+    corps = _requete(serveur, "GET", "/")[1]
+    assert 'action="/annuler"' in corps and "Annuler l'analyse" in corps
+
+    code, _, lieu = _requete(serveur, "POST", "/annuler", [jeton])
+    assert (code, lieu) == (303, "/") and watch.annulation_demandee()
+    corps = _requete(serveur, "GET", "/")[1]
+    assert "Annulation en cours" in corps and 'action="/annuler"' not in corps
+
+    en_cours[0] = False                            # l'analyse s'est arrêtée
+    os.remove(watch.chemin_annulation())
+    watch._ecrire_json(os.path.join(config.dossier_config(), "derniere_execution.json"), {"annulee": True})
+    corps = _requete(serveur, "GET", "/")[1]
+    assert "Analyse annulée." in corps and "Analyser maintenant" in corps
+    assert "Analyse annulée." not in _requete(serveur, "GET", "/")[1]      # annoncée une fois
+
+
+def test_annuler_sans_analyse_en_cours_ne_laisse_rien(serveur, monkeypatch):
+    _deux_sites()
+    code, _, lieu = _requete(serveur, "POST", "/annuler", [("jeton", server._session["jeton_formulaire"])])
+    assert (code, lieu) == (303, "/")
+    assert not watch.annulation_demandee()
+    assert "Analyse annulée." not in _requete(serveur, "GET", "/")[1]
+
+
+def test_pas_de_message_d_annulation_si_l_analyse_a_fini_quand_meme(serveur, monkeypatch):
+    """Clic arrivé après le dernier contrôle de l'analyse : elle finit normalement."""
+    _deux_sites()
+    en_cours = [True]
+    monkeypatch.setattr(server, "analyse_active", lambda: en_cours[0])
+    monkeypatch.setattr(watch, "analyse_en_cours", lambda: en_cours[0])
+    _requete(serveur, "POST", "/annuler", [("jeton", server._session["jeton_formulaire"])])
+    en_cours[0] = False
+    watch._ecrire_json(os.path.join(config.dossier_config(), "derniere_execution.json"), {"annulee": False})
+    assert "Analyse annulée." not in _requete(serveur, "GET", "/")[1]
+
+
+def test_clic_sur_annuler_oublie_quand_une_nouvelle_analyse_part(serveur, monkeypatch):
+    _deux_sites()
+    monkeypatch.setattr(server, "analyse_active", lambda: False)
+    monkeypatch.setattr(watch, "executer", lambda **k: {"annulee": False})
+    server._session["annulation"] = True
+    assert server.lancer_analyse(["b"])
+    server._session["fil"].join(5)
+    watch._ecrire_json(os.path.join(config.dossier_config(), "derniere_execution.json"), {"annulee": True})
+    assert "Analyse annulée." not in _requete(serveur, "GET", "/")[1]
+
+
+def test_annuler_l_analyse_de_l_interface_meme_avec_un_verrou_de_plus_de_3_heures(serveur, monkeypatch):
+    """Ordinateur en veille pendant une analyse : le verrou paraît périmé, le fil tourne encore."""
+    _deux_sites()
+    monkeypatch.setattr(server, "analyse_active", lambda: True)
+    monkeypatch.setattr(watch, "analyse_en_cours", lambda: False)
+    _requete(serveur, "POST", "/annuler", [("jeton", server._session["jeton_formulaire"])])
+    assert watch.annulation_demandee()
+
+
+def test_annuler_depuis_la_page_du_site_y_revient(serveur, monkeypatch):
+    _deux_sites()
+    monkeypatch.setattr(server, "analyse_active", lambda: True)
+    monkeypatch.setattr(watch, "analyse_en_cours", lambda: True)
+    assert "Annuler l'analyse" in _requete(serveur, "GET", "/site?cle=b")[1]
+    code, _, lieu = _requete(serveur, "POST", "/annuler", [("jeton", server._session["jeton_formulaire"]),
+                                                          ("cle", "b"), ("retour", "site")])
+    assert (code, lieu) == (303, "/site?cle=b")
+    corps = _requete(serveur, "GET", "/site?cle=b")[1]
+    assert "Annulation en cours" in corps and 'action="/annuler"' not in corps

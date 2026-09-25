@@ -57,7 +57,7 @@ EMPREINTE = _empreinte()
 
 _session = {"etat_oauth": None, "jeton_temp": None, "reconnecter": None, "fil": None,
             "jeton_formulaire": secrets.token_urlsafe(24), "derniere_requete": time.time(),
-            "mise_a_jour": None}
+            "mise_a_jour": None, "annulation": False}
 
 
 # --- analyse en arrière-plan -----------------------------------------------------------------
@@ -70,6 +70,8 @@ def lancer_analyse(cles=None):
     """cles : les sites à analyser, ou None pour tous."""
     if analyse_active():
         return False
+
+    _session["annulation"] = False              # un clic sur Annuler vise l'analyse précédente
 
     def travail():
         try:
@@ -208,7 +210,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             routes = {"/activer": self._activer, "/analyser": self._analyser, "/ignorer": self._ignorer,
                       "/retirer": self._retirer, "/reglages": self._reglages, "/arreter": self._arreter,
                       "/modifier": self._modifier, "/masquer-consigne": self._masquer_consigne,
-                      "/mettre-a-jour": self._mettre_a_jour}
+                      "/mettre-a-jour": self._mettre_a_jour, "/annuler": self._annuler}
             if self.path not in routes:
                 return self._repondre(pages.erreur("Page introuvable", "Cette page n'existe pas."), 404)
             routes[self.path](champs)
@@ -221,12 +223,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not donnees["sites"]:
             return self._repondre(pages.accueil())
         en_cours = analyse_active()
+        # annulation demandée : en cours tant que l'analyse tourne, puis annoncée une fois, si
+        # l'analyse s'est vraiment arrêtée (une demande arrivée après son dernier contrôle ne
+        # l'arrête pas)
+        annulation = None
+        if en_cours and watch.annulation_demandee():
+            annulation = "demandee"
+        elif not en_cours and _session["annulation"]:
+            _session["annulation"] = False
+            derniere = os.path.join(config.dossier_config(), "derniere_execution.json")
+            try:
+                if json.load(io.open(derniere, encoding="utf-8")).get("annulee"):
+                    annulation = "faite"
+            except (OSError, ValueError):
+                pass
         self._repondre(pages.tableau_de_bord(donnees["sites"], watch.lire_etat(), en_cours,
                                              watch.lire_progression() if en_cours else None,
                                              donnees["planification"], _session["jeton_formulaire"],
                                              consigne=not donnees.get("interface", {}).get("consigne_masquee"),
                                              maj=mise_a_jour.disponible(),
-                                             a_jour=_un(q or {}, "maj") == __version__))
+                                             a_jour=_un(q or {}, "maj") == __version__, annulation=annulation))
 
     def _connecter(self, q):
         _session["reconnecter"] = _un(q, "site") or None
@@ -294,7 +310,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         en_cours = analyse_active()
         du_site = en_cours and (watch.lire_progression() or {}).get("site") == sites[cle]["nom"]
         self._repondre(pages.page_site(cle, sites[cle], watch.lire_etat().get(cle) or {}, en_cours,
-                                       _session["jeton_formulaire"], len(config.lire_ecartees(cle)), du_site))
+                                       _session["jeton_formulaire"], len(config.lire_ecartees(cle)), du_site,
+                                       en_cours and watch.annulation_demandee()))
 
     # --- actions ---
     def _activer(self, champs):
@@ -377,6 +394,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         lancer_analyse(cles or None)
         if _un(champs, "retour") == "site" and len(cles) == 1:
             return self._rediriger("/site?cle=%s" % urllib.parse.quote(cles[0]), 303)
+        self._rediriger("/", 303)
+
+    def _annuler(self, champs):
+        """Bouton Annuler : l'analyse en cours, lancée d'ici ou par la tâche planifiée,
+        s'arrête à la fin de l'opération en cours (une requête à Google ou au site)."""
+        if analyse_active() and watch.demander_annulation(forcer=True):
+            _session["annulation"] = True
+        cle = _un(champs, "cle")
+        if _un(champs, "retour") == "site" and cle in config.lire()["sites"]:
+            return self._rediriger("/site?cle=%s" % urllib.parse.quote(cle), 303)
         self._rediriger("/", 303)
 
     def _ignorer(self, champs):

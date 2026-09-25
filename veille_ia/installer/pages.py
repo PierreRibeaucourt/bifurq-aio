@@ -168,6 +168,16 @@ def _bouton_analyser(cle, jeton, en_cours, nom, texte=None, retour=False):
                classe, etiquette, " disabled" if en_cours else "", contenu))
 
 
+def _bouton_annuler(jeton, demandee, cle=None):
+    """Arrête l'analyse en cours. cle : bouton de la page d'un site, qui y ramène."""
+    if demandee:
+        return '<button class="bouton secondaire" type="button" disabled>Annulation en cours</button>'
+    retour = ('<input type="hidden" name="cle" value="%s"><input type="hidden" name="retour" value="site">' % e(cle)
+              if cle else "")
+    return ('<form class="enligne annuler" method="post" action="/annuler">%s%s'
+            '<button class="bouton secondaire" type="submit">Annuler l\'analyse</button></form>' % (_jeton(jeton), retour))
+
+
 def _outils_sites(sites, etat):
     """Recherche et compteurs par état, discrets, seulement pour une longue liste."""
     if len(sites) <= SEUIL_RECHERCHE:
@@ -214,12 +224,12 @@ filtres.forEach(function(f){f.addEventListener('click',function(){var s=f.getAtt
 lire();
 if(!filtres.some(function(f){return f.getAttribute('data-statut')===statut;}))statut='';
 appliquer();
-if(document.querySelector('[data-rafraichir]')){(function boucle(){setTimeout(function(){
-if(q&&document.activeElement===q)boucle();else location.reload();},3000);})();}
 })();"""
 
 
-def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True, maj=None, a_jour=False):
+def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=True, maj=None, a_jour=False,
+                    annulation=None):
+    """annulation : "demandee" pendant que l'analyse s'arrête, "faite" une fois arrêtée."""
     actif = (progression or {}).get("site") if en_cours else None
     lignes = []
     for cle in ordre_des_sites(sites, etat):
@@ -241,13 +251,19 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
         lignes.append(entete_site(cfg["nom"], es, en_cours=actif == cfg["nom"], lien=lien, actions="".join(actions),
                                   details=False, classe="carte-site", attributs=attributs))
     chantier = ""
-    if en_cours:
+    if en_cours and annulation == "demandee":
+        chantier = ('<div class="chantier" role="status" data-rafraichir><span class="roue"></span><p>Annulation en '
+                    'cours. L\'analyse s\'arrête à la fin de l\'opération en cours.</p></div>')
+    elif en_cours:
         detail = ""
         if progression:
             detail = " : %s, %s" % (e(progression.get("site", "")), e(_minuscule(progression.get("etape", ""))))
         # rechargée par SCRIPT_SITES, qui attend si l'on tape dans la recherche
         chantier = ('<div class="chantier" role="status" data-rafraichir><span class="roue"></span><p>Analyse en '
-                    'cours%s. Cette page se met à jour toute seule.</p></div>' % detail)
+                    'cours%s. Cette page se met à jour toute seule.</p>%s</div>' % (detail, _bouton_annuler(jeton, False)))
+    elif annulation == "faite":
+        chantier = ('<div class="encadre" role="status"><p>Analyse annulée. Les sites dont l\'analyse était '
+                    'terminée affichent leurs nouveaux résultats.</p></div>')
     bouton = ('<button class="bouton" type="submit" disabled><span class="roue"></span>Analyse en cours</button>'
               if en_cours else '<button class="bouton" type="submit">%s<span class="libelle">Analyser maintenant</span>'
                                '</button>' % ICONE_ANALYSER)
@@ -267,11 +283,11 @@ def tableau_de_bord(sites, etat, en_cours, progression, planif, jeton, consigne=
         rappel, " data-en-cours" if en_cours else "", _jeton(jeton), bouton, annonce,
         _consigne(planif, jeton) if consigne else "", chantier, _outils_sites(sites, etat), "".join(lignes),
         bandeau_auteur())
-    return gabarit("Vos sites", corps, onglet="sites", script=SCRIPT_SITES)
+    return gabarit("Vos sites", corps, onglet="sites", script=SCRIPT_SITES, rafraichir=3 if en_cours else None)
 
 
-def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees, analyse_du_site=None):
-    """en_cours : une analyse tourne (boutons désactivés, page rechargée) ;
+def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees, analyse_du_site=None, annulation_demandee=False):
+    """en_cours : une analyse tourne (boutons désactivés, page rechargée, bouton Annuler) ;
     analyse_du_site : c'est ce site qu'elle analyse en ce moment (panneau en cours)."""
     if analyse_du_site is None:
         analyse_du_site = en_cours
@@ -282,6 +298,7 @@ def page_site(cle, cfg, es, en_cours, jeton, nb_ignorees, analyse_du_site=None):
     ignorees = ('<p class="pied">%d adresse%s ignorée%s sur ce site.</p>'
                 % (nb_ignorees, "s" if nb_ignorees > 1 else "", "s" if nb_ignorees > 1 else "")) if nb_ignorees else ""
     actions = (_bouton_analyser(cle, jeton, en_cours, cfg["nom"], "Analyser ce site", retour=True)
+               + (_bouton_annuler(jeton, annulation_demandee, cle) if en_cours else "")
                + '<a class="bouton secondaire" href="/modifier?cle=%s">%sModifier ce site</a>' % (e(cle), ICONE_MODIFIER))
     corps = "%s%s%s%s" % (RETOUR, entete_site(cfg["nom"], es, analyse_du_site, niveau=1, actions=actions),
                           tableau_adresses(es, ignorer, cfg["nom"]), ignorees)

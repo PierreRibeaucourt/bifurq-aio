@@ -22,6 +22,8 @@ CE QUI NE DOIT JAMAIS ARRIVER, ET COMMENT ON L'EMPÊCHE :
     sera de nouveau signalée si la redirection saute un jour ;
   - deux analyses en même temps (tâche planifiée et bouton de l'interface) : un
     verrou dans config/ ;
+  - une analyse annulée lue comme "rien à corriger" : le site interrompu garde son
+    état précédent, les sites suivants aussi ; seuls les sites finis sont mis à jour ;
   - une même panne notifiée à chaque démarrage de l'ordinateur : une fois par jour au plus."""
 import collections
 import concurrent.futures as cf
@@ -163,15 +165,68 @@ def _prendre_verrou():
     if analyse_en_cours():
         return False
     _ecrire_json(chemin_verrou(), {"pid": os.getpid(), "debut": time.time()})
+    _retirer(chemin_annulation())              # une demande restée d'une analyse finie entre-temps
+    _annulation_vue.clear()
     return True
 
 
 def _rendre_verrou():
-    for p in (chemin_verrou(), chemin_progression()):
-        try:
-            os.remove(p)
-        except OSError:
-            pass
+    for p in (chemin_verrou(), chemin_progression(), chemin_annulation()):
+        _retirer(p)
+    _annulation_vue.clear()
+
+
+def _retirer(p):
+    try:
+        os.remove(p)
+    except OSError:
+        pass
+
+
+# --- annulation (bouton Annuler de l'interface) ---------------------------------------------
+# Un fichier dans config/ plutôt qu'un signal : l'analyse tourne soit dans l'interface (un fil,
+# qu'on ne peut pas arrêter de l'extérieur), soit dans la tâche planifiée (un autre processus).
+# Elle le regarde entre deux étapes et dans ses boucles longues, et s'arrête proprement.
+class AnalyseAnnulee(Exception):
+    """L'utilisateur a arrêté l'analyse depuis l'interface."""
+
+
+def chemin_annulation():
+    return os.path.join(config.dossier_config(), "annulation")
+
+
+def demander_annulation(forcer=False):
+    """Rend False si aucune analyse ne tourne (rien à annuler). forcer : l'interface voit son
+    propre fil d'analyse vivant, même avec un verrou de plus de 3 heures (ordinateur en veille).
+    Seule la présence du fichier compte : un ajout, sûr même pour deux clics simultanés
+    (os.replace échoue alors sous Windows). Une demande restée sans analyse est effacée par la
+    suivante quand elle prend le verrou."""
+    if not (forcer or analyse_en_cours()):
+        return False
+    with io.open(chemin_annulation(), "a", encoding="utf-8") as f:
+        f.write("%s\n" % time.time())
+    return True
+
+
+def annulation_demandee():
+    """Une demande d'annulation attend (pour l'interface)."""
+    return os.path.exists(chemin_annulation())
+
+
+# Pour l'analyse : une annulation vue le reste jusqu'à la fin de l'analyse, même si le fichier
+# disparaît entre-temps (fin d'une autre analyse restée active après une mise en veille).
+_annulation_vue = set()
+
+
+def _annulee():
+    if annulation_demandee():
+        _annulation_vue.add(True)
+    return bool(_annulation_vue)
+
+
+def verifier_annulation():
+    if _annulee():
+        raise AnalyseAnnulee()
 
 
 # --- un site -----------------------------------------------------------------------------------
@@ -187,6 +242,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
          "a_rediriger": [], "non_controlees": [], "anomalies": anomalies, "infos": infos,
          "resolues": [], "compte": {}, "protection": None}
 
+    verifier_annulation()
     etape("Lecture de la Search Console")
     fin = gsc_api.dernier_jour(chemin_jeton, cfg["propriete"])
     if fin is None:
@@ -219,8 +275,9 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                      "rien à analyser pour l'instant.")
         return r
 
+    verifier_annulation()
     etape("Lecture du plan de site")
-    plan = sitemap.plan_de_site(cfg["sitemaps"], journal, strict=True)
+    plan = sitemap.plan_de_site(cfg["sitemaps"], journal, strict=True, verifier=verifier_annulation)
     if not plan:
         raise ErreurPlanDeSite("Le plan de site de votre site ne contient aucune page (%s)."
                                % ", ".join(cfg["sitemaps"]))
@@ -248,16 +305,28 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
     file_ = sorted({u for p in actifs for u in variantes[p] if u in recent and u not in insp}, key=lambda u: -recent[u])
     a_inspecter, reportees = file_[:MAX_INSPECTIONS], max(0, len(file_) - MAX_INSPECTIONS)
     codes_insp = collections.Counter()
+
+    def inspecter(u):
+        # après une annulation, les inspections pas encore parties ne partent plus (None)
+        return None if _annulee() else gsc_api.inspecter(chemin_jeton, u, cfg["propriete"])
+    verifier_annulation()
+    sautees = 0
     if a_inspecter:
         etape("Vérification de %d adresse%s auprès de Google" % (len(a_inspecter), "s" if len(a_inspecter) > 1 else ""))
         with io.open(CI, "a", encoding="utf-8") as f, cf.ThreadPoolExecutor(6) as ex:
-            for x in ex.map(lambda u: gsc_api.inspecter(chemin_jeton, u, cfg["propriete"]), a_inspecter):
+            for x in ex.map(inspecter, a_inspecter):
+                if x is None:
+                    sautees += 1
+                    continue
                 codes_insp[x.get("http")] += 1
                 f.write(json.dumps(dict(x, veille=aujourd_hui), ensure_ascii=False) + "\n")
                 f.flush()
                 insp_tout[x["url"]] = x
                 if x.get("http") == 200:
                     insp[x["url"]] = x
+    if sautees:                                # des adresses pas vérifiées : jamais un site complet
+        raise AnalyseAnnulee()
+    verifier_annulation()
     echecs_insp = sum(n for c, n in codes_insp.items() if c != 200)
     if codes_insp.get(403) or echecs_insp > 0.1 * max(1, len(a_inspecter)):
         journal("   inspections en échec : %s" % dict(codes_insp))
@@ -290,6 +359,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
                 code, veille = h.get("code"), h.get("veille") or ""
                 frais = (code in ERREURS and veille == aujourd_hui) or (corrigee(code) and veille >= limite)
                 if not frais:
+                    verifier_annulation()
                     h = dict(controleur_http.controler(u), url=u, veille=aujourd_hui)
                     f.write(json.dumps(h, ensure_ascii=False) + "\n")
                     f.flush()
@@ -337,6 +407,7 @@ def veille_site(cle, cfg, controleur_http, journal, aujourd_hui=None, etape=None
         t = titres.get(v) or {}
         # une page illisible (None) est réessayée le lendemain, une page lue au bout de 30 jours
         if not (t.get("veille") == aujourd_hui or (t.get("textes") is not None and t.get("veille", "") >= limite_titres)):
+            verifier_annulation()
             t = {"url": v, "veille": aujourd_hui, "textes": controleur_http.lire_titres(v)}
             with io.open(CT, "a", encoding="utf-8") as f:
                 f.write(json.dumps(t, ensure_ascii=False) + "\n")
@@ -432,13 +503,18 @@ def _executer(test, interactif, cles=None):
     sites = config.lire()["sites"]
     if not sites:
         journal("aucun site configuré : rien à faire")
-        return {"resultats": [], "echecs": {}, "reportes": [], "nouvelles": {}, "notifiee": False, "rapport": None}
+        return {"resultats": [], "echecs": {}, "reportes": [], "nouvelles": {}, "notifiee": False, "rapport": None,
+                "annulee": False}
 
     resultats, echecs, reportes, entrees, suivis = [], {}, [], {}, {}
+    annulee = False
     for cle in report.ordre_des_sites(sites, lire_etat()):      # dans l'ordre de Mes sites
         cfg = sites[cle]
         if cles is not None and cle not in cles:
             continue
+        if _annulee():
+            annulee = True
+            break
         if time.time() - t0 > DUREE_MAX:
             reportes.append(cle)
             continue
@@ -454,6 +530,10 @@ def _executer(test, interactif, cles=None):
                 (" | " + " ; ".join(r["anomalies"])) if r["anomalies"] else ""))
             suivis[cle] = _nouvelles_du_site(r)
             entrees[cle] = _etat_du_site(r, suivis[cle][2], lire_etat().get(cle, {}), maintenant)
+        except AnalyseAnnulee:
+            journal("%-16s analyse annulée : le site garde ses résultats précédents" % cfg["nom"])
+            annulee = True
+            break
         except Exception as ex:
             message, action = expliquer(ex)
             echecs[cle] = {"message": message, "action": action}
@@ -516,19 +596,21 @@ def _executer(test, interactif, cles=None):
             _ecrire_json(p, sorted(deja | (n if envoyee else set())))
         _ecrire_json(os.path.join(D, "derniere_execution.json"),
                      {"date": maintenant, "sites_ok": [r["site"] for r in resultats], "echecs": echecs,
-                      "reportes": reportes, "notification_envoyee": envoyee})
+                      "reportes": reportes, "notification_envoyee": envoyee, "annulee": annulee})
         chemin_jour = os.path.join(D, "veille_%s.json" % aujourd_hui)
         jour = {"date": aujourd_hui, "resultats": resultats, "echecs": echecs, "reportes": reportes}
-        if cles is not None:                  # quelques sites : les autres résultats du jour restent
+        if cles is not None or annulee:       # une partie des sites : les autres résultats du jour restent
+            faits = {r["site"] for r in resultats} | set(echecs)
             ancien = _lire_json(chemin_jour, {})
-            jour["resultats"] = [r for r in ancien.get("resultats", []) if r.get("site") not in cles] + resultats
-            jour["echecs"] = dict({k: v for k, v in ancien.get("echecs", {}).items() if k not in cles}, **echecs)
+            jour["resultats"] = [r for r in ancien.get("resultats", []) if r.get("site") not in faits] + resultats
+            jour["echecs"] = dict({k: v for k, v in ancien.get("echecs", {}).items() if k not in faits}, **echecs)
         _ecrire_json(chemin_jour, jour)
         anciens = sorted(f for f in os.listdir(D) if re.match(r"veille_\d{4}-\d\d-\d\d\.json$", f))[:-60]
         for f in anciens:
             os.remove(os.path.join(D, f))
 
-    journal("terminé en %d min : %d à corriger dont %d nouvelles, %d site(s) en problème"
-            % ((time.time() - t0) // 60, sum(len(r["a_rediriger"]) for r in resultats), total, len(echecs)))
+    journal("%s en %d min : %d à corriger dont %d nouvelles, %d site(s) en problème"
+            % ("annulée par l'utilisateur" if annulee else "terminé", (time.time() - t0) // 60,
+               sum(len(r["a_rediriger"]) for r in resultats), total, len(echecs)))
     return {"resultats": resultats, "echecs": echecs, "reportes": reportes, "nouvelles": nouvelles,
-            "notifiee": envoyee, "rapport": chemin_rapport}
+            "notifiee": envoyee, "rapport": chemin_rapport, "annulee": annulee}
