@@ -134,7 +134,7 @@ def test_activer_ajoute_les_sites_puis_un_second_envoi_ramene_a_mes_sites(serveu
     monkeypatch.setattr(sitemap, "deviner_sitemaps",
                         lambda racine: [racine + "sitemap_index.xml"] if "a.fr" in racine else [])
     monkeypatch.setattr(plateforme, "planifier", lambda *args: None)
-    monkeypatch.setattr(server, "lancer_analyse", lambda: True)
+    monkeypatch.setattr(server, "lancer_analyse", lambda cles=None: True)
     os.makedirs(config.dossier_config(), exist_ok=True)
     with open(server._chemin_temp(), "w", encoding="utf-8") as f:
         f.write('{"refresh_token": "r"}')
@@ -151,6 +151,22 @@ def test_activer_ajoute_les_sites_puis_un_second_envoi_ramene_a_mes_sites(serveu
     assert (code, lieu) == (303, "/")
 
 
+def test_ajouter_des_sites_n_analyse_que_ceux_ajoutes(serveur, monkeypatch):
+    config.ajouter_site("deja-suivi", nom="deja-suivi.fr", propriete="sc-domain:deja-suivi.fr", sitemaps=[])
+    monkeypatch.setattr(sitemap, "deviner_sitemaps", lambda racine: [])
+    lancees = []
+    monkeypatch.setattr(server, "lancer_analyse", lambda cles=None: lancees.append(cles) or True)
+    with open(server._chemin_temp(), "w", encoding="utf-8") as f:
+        f.write('{"refresh_token": "r"}')
+    monkeypatch.setitem(server._session, "jeton_temp", server._chemin_temp())
+
+    code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("https://a.fr/", "sc-domain:b.fr"))
+    assert (code, lieu) == (303, "/")
+    proprietes = {cle: cfg["propriete"] for cle, cfg in config.lire()["sites"].items()}
+    assert len(lancees) == 1
+    assert sorted(proprietes[c] for c in lancees[0]) == ["https://a.fr/", "sc-domain:b.fr"]
+
+
 def test_activer_sans_connexion_google_renvoie_vers_google(serveur):
     code, _, lieu = _requete(serveur, "POST", "/activer", _formulaire_activer("sc-domain:c.fr"))
     assert (code, lieu) == (303, "/connecter")
@@ -161,7 +177,7 @@ def _reconnecter(port, monkeypatch, cle, proprietes_du_compte):
     monkeypatch.setattr(oauth, "echanger_code", lambda code, uri: {"refresh_token": "nouveau-compte"})
     monkeypatch.setattr(gsc_api, "lister_proprietes", lambda chemin: [
         {"siteUrl": p, "permissionLevel": "siteOwner"} for p in proprietes_du_compte])
-    monkeypatch.setattr(server, "lancer_analyse", lambda: True)
+    monkeypatch.setattr(server, "lancer_analyse", lambda cles=None: True)
     _requete(port, "GET", "/connecter?site=" + cle)
     return _requete(port, "GET", "/oauth2/callback?code=c&state=" + server._session["etat_oauth"])
 

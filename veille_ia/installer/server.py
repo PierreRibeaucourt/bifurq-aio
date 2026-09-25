@@ -326,17 +326,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         racines = [_racine_http(p) for p in choisies]
         with ThreadPoolExecutor(max_workers=min(8, len(racines))) as pool:   # un site lent ne retarde pas les autres
             plans = list(pool.map(sitemap.deviner_sitemaps, racines))
+        ajoutes = []
         for propriete, racine, trouves in zip(choisies, racines, plans):
             cle = _cle_depuis_propriete(propriete, config.lire()["sites"])
             sitemaps = trouves or [racine.rstrip("/") + "/sitemap.xml"]
             config.ajouter_site(cle, nom=_nom_lisible(propriete), propriete=propriete, sitemaps=sitemaps,
                                 seuil_impressions=seuil, dataforseo=dataforseo)
             io.open(config.chemin_jeton(cle), "w", encoding="utf-8").write(contenu)
+            ajoutes.append(cle)
         _effacer_temp()
         if premiere_fois:
             config.definir_planification(au_demarrage, actif_heure_fixe, heure_fixe)
             plateforme.planifier(au_demarrage, actif_heure_fixe, heure_fixe)
-        lancer_analyse()
+        lancer_analyse(ajoutes)                        # les sites déjà suivis gardent leur analyse du jour
         self._rediriger("/", 303)
 
     def _masquer_consigne(self, champs):
