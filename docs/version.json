@@ -1,4 +1,4 @@
 {
-  "version": "0.5.2",
-  "nouveautes": "L'outil compare aussi l'adresse inventée au titre des pages de votre site. Il trouve ainsi la bonne page quand l'IA de Google a fabriqué l'adresse à partir de ce titre."
+  "version": "0.5.3",
+  "nouveautes": "L'outil lit les plans de site de WordPress (All in One SEO) et de PrestaShop, qu'il prenait à tort pour vides."
 }

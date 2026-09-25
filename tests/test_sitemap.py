@@ -155,3 +155,42 @@ def test_plan_de_site_bloque_nomme_la_protection(journal):
     finally:
         s.arreter()
     assert "protection anti-robots Akamai" in str(erreur.value)
+
+
+def test_adresses_entourees_de_cdata(journal):
+    """Régression du 25.09.2026 : All in One SEO (WordPress) et PrestaShop écrivent
+    <loc><![CDATA[...]]></loc>, et deux sites étaient lus comme vides."""
+    s = _Serveur({})
+    racine = "http://127.0.0.1:%d" % s.port
+    s.routes["/sitemap.xml"] = (("""<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/default-sitemap.xsl?sitemap=root"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<sitemap>
+		<loc><![CDATA[%s/page-sitemap.xml]]></loc>
+		<lastmod><![CDATA[2026-09-21T12:30:55+00:00]]></lastmod>
+	</sitemap>
+</sitemapindex>""" % racine).encode(), "text/xml; charset=UTF-8", False)
+    s.routes["/page-sitemap.xml"] = (("""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+<url>
+<loc><![CDATA[%s/es/]]></loc>
+<image:image><image:loc><![CDATA[%s/img/logo.jpg]]></image:loc></image:image>
+</url>
+<url><loc> <![CDATA[ %s/es/cadenas/402-cadena ]]> </loc></url>
+<url><loc>%s/es/contacto</loc></url>
+</urlset>""" % (racine, racine, racine, racine)).encode(), "text/xml", False)
+    try:
+        pages = sitemap.plan_de_site([racine + "/sitemap.xml"], journal, strict=True)
+    finally:
+        s.arreter()
+    # "/" final retiré par urls.norm, <image:loc> jamais pris pour une page
+    assert pages == {racine + "/es", racine + "/es/cadenas/402-cadena", racine + "/es/contacto"}
+
+
+def test_adresses_illisibles_levent_une_erreur_en_strict(journal):
+    s = _Serveur({"/sitemap.xml": (b"<urlset><url><loc><a>http://x/page</a></loc></url></urlset>", "text/xml", False)})
+    try:
+        with pytest.raises(RuntimeError, match="ne sait pas lire"):
+            sitemap.plan_de_site(["http://127.0.0.1:%d/sitemap.xml" % s.port], journal, strict=True)
+    finally:
+        s.arreter()

@@ -14,6 +14,9 @@ from .urls import norm
 # trahie par l'empreinte réseau de Python, est refusée par certaines protections
 # (relevé le 24.09.2026 : Akamai rendait 403 au faux Chrome et 200 à Bifurq-AIO).
 DELAI_COURTOISIE = 1.5
+# une adresse, entourée ou non de <![CDATA[ ]]> (All in One SEO sous WordPress, PrestaShop :
+# relevé du 25.09.2026, deux sites lus comme vides). Jamais <image:loc>.
+LOC = re.compile(r"<loc>\s*(?:<!\[CDATA\[)?\s*([^<]+?)\s*(?:\]\]>)?\s*</loc>")
 
 
 def lire_url(url, timeout=60):
@@ -62,12 +65,17 @@ def plan_de_site(racines, journal, strict=False):
                 raise ErreurPlanDeSite("Impossible de lire le plan de site de votre site (%s)." % u,
                                        "plan de site illisible : %s (%s)" % (u, getattr(e, "code", e)))
             continue
-        locs = [l.replace("&amp;", "&").strip() for l in re.findall(r"<loc>\s*([^<]+?)\s*</loc>", x)]
+        locs = [l.replace("&amp;", "&").strip() for l in LOC.findall(x)]
         if strict and not locs and "<urlset" not in x and "<sitemapindex" not in x:
             raise ErreurPlanDeSite(
                 "Votre site a renvoyé une page à la place de son plan de site (%s). "
                 "Cela arrive quand un pare-feu bloque la lecture." % u,
                 "réponse qui n'est pas un plan de site : %s" % u)
+        if strict and not locs and "<loc>" in x:
+            # des adresses écrites autrement : un plan lu comme vide ferait tout passer pour inventé
+            raise ErreurPlanDeSite(
+                "L'outil ne sait pas lire les adresses du plan de site de votre site (%s)." % u,
+                "adresses du plan de site illisibles : %s" % u)
         if "<sitemapindex" in x:
             file_ += locs
         else:
