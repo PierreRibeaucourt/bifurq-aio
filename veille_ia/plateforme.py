@@ -20,9 +20,10 @@ RACCOURCI = {"windows": "le raccourci <b>%s</b> de votre bureau" % NOM,
              "mac": "l'application <b>%s</b>, dans Launchpad ou avec Spotlight" % NOM,
              "linux": "l'application <b>%s</b> du menu des applications" % NOM}
 
-# fin du texte d'une notification : seul Windows ouvre le rapport au clic
+# fin du texte d'une notification : un clic ouvre le rapport sous Windows, l'outil sur Mac
+# (voir systeme_mac) ; rien sous Linux, où notify-send n'attend pas de clic
 APPEL_NOTIFICATION = {"windows": "Cliquez pour voir quoi faire.",
-                      "mac": "Ouvrez %s pour voir quoi faire." % NOM,
+                      "mac": "Cliquez pour voir quoi faire.",
                       "linux": "Ouvrez %s pour voir quoi faire." % NOM}
 
 

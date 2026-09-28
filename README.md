@@ -116,7 +116,8 @@ recharge. Vos sites, connexions Google et réglages sont conservés.
 - **Réglages** : change le moment des analyses automatiques ou les arrête.
 
 Une notification apparaît quand une analyse automatique trouve une nouvelle adresse à
-corriger. Sous Windows, un clic dessus ouvre le rapport. Le dernier rapport se trouve aussi dans
+corriger. Un clic dessus ouvre le rapport sous Windows et l'outil sur Mac. Sur Mac, autorisez les
+notifications de **Bifurq AIO** quand macOS le demande, à la première. Le dernier rapport se trouve aussi dans
 `config/rapport.html`, dans le dossier de l'outil. Les rapports des 60 derniers jours sont dans le
 dossier `rapports` à côté.
 

@@ -66,7 +66,7 @@ else
     verifier "double-clic (open)" open "$APP"
     if interface; then ok "outil installé et ouvert"; else ko "application d'installation" "$(tail -5 "$HOME/Library/Application Support/Bifurq AIO/config/serveur.log" 2>&1)"; fi
     verifier "outil dans Application Support" test -x "$HOME/Library/Application Support/Bifurq AIO/config/venv/bin/python3"
-    verifier "application Bifurq AIO créée" test -x "$HOME/Applications/Bifurq AIO.app/Contents/MacOS/bifurq-aio"
+    verifier "application Bifurq AIO créée" test -x "$HOME/Applications/Bifurq AIO.app/Contents/MacOS/applet"
 fi
 
 echo

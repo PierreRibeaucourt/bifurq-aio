@@ -86,14 +86,16 @@ etape "Raccourci"
 if [ "$SYSTEME" = "Darwin" ]; then
     APP="$HOME/Applications/Bifurq AIO.app"
     verifier "Info.plist de l'application" plutil -lint "$APP/Contents/Info.plist"
-    verifier "script de l'application exécutable" test -x "$APP/Contents/MacOS/bifurq-aio"
-    verifier "icône de l'application" test -s "$APP/Contents/Resources/icone.icns"
+    verifier "applet AppleScript de l'application" test -x "$APP/Contents/MacOS/applet"
+    verifier "application signée sur place" codesign --verify --strict "$APP"
+    verifier "application au nom de l'outil" sh -c "plutil -p '$APP/Contents/Info.plist' | grep -q 'io.github.pierreribeaucourt.bifurq-aio'"
+    verifier "icône de l'application" cmp -s "$D/icone.icns" "$APP/Contents/Resources/applet.icns"
     ls -la "$APP/Contents/MacOS"
     # l'application relance l'interface arrêtée
     kill "$(pid_interface)"; sleep 1
     verifier "open lance l'application" open "$APP"
     verifier "l'application rouvre l'interface" attendre_interface
-    xattr -l "$APP" "$APP/Contents/MacOS/bifurq-aio"
+    xattr -l "$APP" "$APP/Contents/MacOS/applet"
 else
     LANCEUR="$HOME/.local/share/applications/bifurq-aio.desktop"
     cat "$LANCEUR"
@@ -132,6 +134,18 @@ if tail -1 config/sortie.log 2>/dev/null | grep -q "aucun site configuré"; then
 else ko "analyse planifiée" "$(tail -5 config/sortie.log config/veille.log 2>&1)"; fi
 
 etape "Notification"
+if [ "$SYSTEME" = "Darwin" ]; then
+    # affichée par l'application (un clic dessus la relance, qui rouvre l'interface, essayé plus haut)
+    debut=$(date +%s)
+    verifier "notification prise par l'application" config/venv/bin/python3 -c "
+import os, sys
+from unittest import mock
+from veille_ia import systeme_mac
+with mock.patch.object(systeme_mac, '_notifier_par_osascript', side_effect=SystemExit('osascript')):
+    systeme_mac.notifier('Bifurq AIO', 'Essai de notification par l application')
+sys.exit(1 if os.listdir(systeme_mac.dossier_notifications()) else 0)"
+    echo "::notice title=Notification par l'application::affichée en $(( $(date +%s) - debut )) s ; application encore ouverte : $(pgrep -f 'Bifurq AIO.app' | wc -l | tr -d ' ')"
+fi
 verifier "notification envoyée" config/venv/bin/python3 -c "
 import sys
 from veille_ia import plateforme

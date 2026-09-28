@@ -37,7 +37,7 @@ def test_chaque_systeme_dit_comment_rouvrir_l_outil():
     assert "Launchpad" in plateforme.raccourci("mac")
     assert "menu des applications" in plateforme.raccourci("linux")
     assert plateforme.appel_notification("windows") == "Cliquez pour voir quoi faire."
-    assert plateforme.appel_notification("mac") == "Ouvrez Bifurq AIO pour voir quoi faire."
+    assert plateforme.appel_notification("mac") == "Cliquez pour voir quoi faire."
 
 
 def test_processus_actif():
@@ -169,7 +169,8 @@ def test_mac_refus_de_launchd_fait_echouer_la_planification(mac, monkeypatch):
         plateforme.planifier(False, True, "08:30")
 
 
-def test_mac_application_qui_lance_l_interface(mac, _racine_isolee):
+def test_mac_application_de_secours_sans_osacompile(mac, monkeypatch, _racine_isolee):
+    monkeypatch.setattr(systeme_mac.shutil, "which", lambda nom: None)
     plateforme.creer_raccourci()
     app = systeme_mac.chemin_application()
     infos = _plist(os.path.join(app, "Contents", "Info.plist"))
@@ -182,6 +183,87 @@ def test_mac_application_qui_lance_l_interface(mac, _racine_isolee):
     if os.name != "nt":
         assert os.access(executable, os.X_OK)
         assert subprocess.run(["sh", "-n", executable]).returncode == 0
+
+
+def _chaine_applescript(s):
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def test_mac_script_de_l_application(mac, _racine_isolee):
+    """Notifications en attente affichées, sinon l'interface ; chemins avec espace et apostrophe."""
+    script = systeme_mac.script_applet()
+    attente = os.path.join(str(_racine_isolee), "config", "notifications_mac")
+    assert 'set attente to "%s"' % _chaine_applescript(attente) in script
+    assert "display notification (item 2 of lignes) with title (item 1 of lignes)" in script
+    lancer = "cd '%s' || exit 1; nohup" % str(_racine_isolee).replace("'", "'\"'\"'")
+    assert _chaine_applescript(lancer) in script
+    assert "-m veille_ia.installer.server >> config/serveur.log 2>&1 &" in script
+    lignes = script.splitlines()
+    assert lignes.count("try") == lignes.count("end try") == 3     # aucune erreur n'ouvre de fenêtre
+
+
+def _fausse_application():
+    macos = os.path.join(systeme_mac.chemin_application(), "Contents", "MacOS")
+    os.makedirs(macos)
+    open(os.path.join(macos, "applet"), "w").close()
+
+
+def test_mac_notification_affichee_par_l_application(mac, monkeypatch):
+    _fausse_application()
+    lancees = []
+
+    def run(commande, **k):
+        lancees.append(commande)
+        if commande[0] == "open":                  # l'application prend la notification
+            dossier = systeme_mac.dossier_notifications()
+            for nom in os.listdir(dossier):
+                with open(os.path.join(dossier, nom), encoding="utf-8") as f:
+                    lancees.append(f.read())
+                os.remove(os.path.join(dossier, nom))
+        return _resultat()
+    monkeypatch.setattr(systeme_mac.subprocess, "run", run)
+    systeme_mac.notifier("exemple.fr : 2 adresses", "Google montre\ndes adresses.")
+    assert lancees == [["open", "-g", "-W", "-a", systeme_mac.chemin_application()],
+                       "exemple.fr : 2 adresses\nGoogle montre des adresses.\n"]
+
+
+def test_mac_notification_par_osascript_si_l_application_ne_la_prend_pas(mac, monkeypatch):
+    _fausse_application()
+    lancees = []
+    monkeypatch.setattr(systeme_mac.subprocess, "run", lambda commande, **k: lancees.append(commande) or _resultat())
+    systeme_mac.notifier("Titre", "Texte")
+    assert lancees[0][0] == "open" and lancees[1][0] == "osascript" and lancees[1][-2:] == ["Titre", "Texte"]
+    assert os.listdir(systeme_mac.dossier_notifications()) == []
+
+
+def test_mac_notification_par_osascript_sans_l_application(mac, monkeypatch):
+    lancees = []
+    monkeypatch.setattr(systeme_mac.subprocess, "run", lambda commande, **k: lancees.append(commande) or _resultat())
+    systeme_mac.notifier("Titre", "Texte")
+    assert [c[0] for c in lancees] == ["osascript"]
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="osacompile, codesign et open de macOS")
+def test_mac_vraie_application_affiche_une_notification(mac, monkeypatch, _racine_isolee):
+    depot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    shutil.copyfile(os.path.join(depot, "icone.icns"), str(_racine_isolee / "icone.icns"))
+    plateforme.creer_raccourci()
+    app = systeme_mac.chemin_application()
+    assert os.path.isfile(os.path.join(app, "Contents", "MacOS", "applet"))
+    infos = _plist(os.path.join(app, "Contents", "Info.plist"))
+    assert infos["CFBundleIdentifier"] == systeme_mac.ETIQUETTE and infos["CFBundleName"] == "Bifurq AIO"
+    assert infos["LSUIElement"] is True
+    assert subprocess.run(["codesign", "--verify", "--strict", app]).returncode == 0
+    icone = os.path.join(app, "Contents", "Resources", infos["CFBundleIconFile"] + ".icns")
+    with open(icone, "rb") as f:
+        assert f.read() == (_racine_isolee / "icone.icns").read_bytes()
+    # lancée sans notification en attente (clic sur une notification) : lance l'interface et se ferme
+    r = subprocess.run(["open", "-g", "-W", "-a", app], capture_output=True, timeout=30)
+    assert r.returncode == 0
+    # une notification : prise et affichée par l'application, jamais par osascript
+    monkeypatch.setattr(systeme_mac, "_notifier_par_osascript", lambda *a: pytest.fail("osascript"))
+    systeme_mac.notifier("Bifurq AIO", "Essai de notification")
+    assert os.listdir(systeme_mac.dossier_notifications()) == []
 
 
 # --- Linux ----------------------------------------------------------------------------------------
